@@ -27,7 +27,7 @@ fn setup(mut commands: Commands) {
     // spawn a circle (using a sprite with circular appearance)
     commands.spawn((
         Sprite {
-            color: Color::srgb(0.3, 0.7, 0.9),
+            color: Color::srgb(0.7, 0.3, 0.9),
             custom_size: Some(Vec2::splat(50.0)),
             ..default()
         },

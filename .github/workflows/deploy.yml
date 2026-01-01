@@ -1,0 +1,78 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-wasm-
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.99
+
+      - name: Build for WASM
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: Generate JS bindings
+        run: |
+          wasm-bindgen --out-dir ./dist \
+            --target web \
+            --no-typescript \
+            ./target/wasm32-unknown-unknown/release/dungeon_vac.wasm
+
+      - name: Copy HTML
+        run: cp index.html ./dist/
+
+      - name: Optimize WASM (optional)
+        run: |
+          if command -v wasm-opt &> /dev/null; then
+            wasm-opt -Oz -o ./dist/dungeon_vac_bg.wasm ./dist/dungeon_vac_bg.wasm
+          fi
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
