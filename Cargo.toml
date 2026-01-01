@@ -1,0 +1,20 @@
+[package]
+name = "dungeon-vac"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.17", features = ["dynamic_linking"] }
+
+# faster runtime during development
+[profile.dev]
+opt-level = 1
+
+# optimize dependencies even in dev mode
+[profile.dev.package."*"]
+opt-level = 3
+
+# max performance for release builds
+[profile.release]
+codegen-units = 1
+lto = "thin"
