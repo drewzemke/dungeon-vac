@@ -1,9 +1,23 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
-const MOVE_SPEED: f32 = 300.0;
+// const MOVE_SPEED: f32 = 300.0;
 
 #[derive(Component)]
-struct Player;
+struct Vac {
+    base_pos: Vec2,
+    heading: Vec2,
+}
+
+impl Vac {
+    fn new() -> Self {
+        Self {
+            base_pos: Vec2::ZERO,
+            heading: Vec2::new(1., 0.),
+        }
+    }
+}
 
 fn main() {
     App::new()
@@ -17,7 +31,7 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
-        .add_systems(Update, move_player)
+        .add_systems(Update, move_vac)
         .run();
 }
 
@@ -39,7 +53,8 @@ fn setup(
         Mesh2d(meshes.add(Circle::new(0.4 * GRID_SIZE))),
         MeshMaterial2d(materials.add(Color::WHITE)),
         Transform::from_xyz(0.0, 0.0, 0.0),
-        Player,
+        Vac::new(),
+        MovementTimer::new(),
     ));
 
     // draw a grid
@@ -70,29 +85,32 @@ fn setup(
     }
 }
 
-fn move_player(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    mut query: Query<&mut Transform, With<Player>>,
-) {
-    for mut transform in &mut query {
-        let mut direction = Vec3::ZERO;
+#[derive(Component, Deref, DerefMut)]
+struct MovementTimer(Timer);
 
-        if keyboard_input.pressed(KeyCode::ArrowUp) {
-            direction.y += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowDown) {
-            direction.y -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            direction.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowRight) {
-            direction.x += 1.0;
-        }
+impl MovementTimer {
+    fn new() -> Self {
+        let timer = Timer::new(Duration::from_millis(1000), TimerMode::Repeating);
+        Self(timer)
+    }
+}
 
-        if direction != Vec3::ZERO {
-            transform.translation += direction.normalize() * MOVE_SPEED * time.delta_secs();
-        }
+fn move_vac(time: Res<Time>, mut query: Query<(&mut Transform, &mut Vac, &mut MovementTimer)>) {
+    let (mut transform, mut vac, mut timer) = query.single_mut().unwrap();
+    timer.tick(time.delta());
+
+    // if the timer finished since the last update,
+    // make sure we're at the destination location, then
+    // choose a new direction
+    let dest = vac.base_pos + vac.heading * GRID_SIZE;
+    if timer.is_finished() {
+        transform.translation = dest.extend(0.0);
+
+        vac.base_pos = dest;
+        vac.heading = Vec2::new(0., -1.);
+    } else {
+        let elapsed = timer.elapsed_secs_f64() as f32;
+        let pos = Vec2::lerp(vac.base_pos, dest, elapsed);
+        transform.translation = pos.extend(0.0);
     }
 }
