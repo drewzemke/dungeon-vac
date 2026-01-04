@@ -1,20 +1,72 @@
-use std::time::Duration;
+use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 
-// const MOVE_SPEED: f32 = 300.0;
+impl Dir {
+    pub fn rotate_ccw(self) -> Self {
+        match self {
+            Self::East => Self::North,
+            Self::North => Self::West,
+            Self::West => Self::South,
+            Self::South => Self::East,
+        }
+    }
 
+    pub fn rotate_cw(self) -> Self {
+        match self {
+            Self::East => Self::South,
+            Self::North => Self::East,
+            Self::West => Self::North,
+            Self::South => Self::West,
+        }
+    }
+
+    pub fn to_radians(self) -> f32 {
+        match self {
+            Dir::East => 0.,
+            Dir::North => PI / 2.,
+            Dir::West => PI,
+            Dir::South => -PI / 2.,
+        }
+    }
+}
+
+impl From<Dir> for Vec2 {
+    fn from(dir: Dir) -> Self {
+        match dir {
+            Dir::East => Vec2::new(1., 0.),
+            Dir::North => Vec2::new(0., 1.),
+            Dir::West => Vec2::new(-1., 0.),
+            Dir::South => Vec2::new(0., -1.),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum VacMovementState {
+    // base pos, heading
+    Moving(Vec2, Dir),
+
+    // starting heading, ending heading
+    Rotating(Dir, Dir),
+}
+
+#[derive(Clone, Copy)]
+enum Dir {
+    East,
+    North,
+    West,
+    South,
+}
 #[derive(Component)]
 struct Vac {
-    base_pos: Vec2,
-    heading: Vec2,
+    state: VacMovementState,
 }
 
 impl Vac {
     fn new() -> Self {
         Self {
-            base_pos: Vec2::ZERO,
-            heading: Vec2::new(1., 0.),
+            state: VacMovementState::Moving(Vec2::ZERO, Dir::East),
         }
     }
 }
@@ -48,13 +100,23 @@ fn setup(
 ) {
     commands.spawn(Camera2d);
 
-    // spawn a circle
+    // spawn a circle with a triangle to show heading
     commands.spawn((
         Mesh2d(meshes.add(Circle::new(0.4 * GRID_SIZE))),
         MeshMaterial2d(materials.add(Color::WHITE)),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        Transform::from_xyz(0.0, 0.0, 0.1),
         Vac::new(),
         MovementTimer::new(),
+        // triangle
+        children![(
+            Mesh2d(meshes.add(Triangle2d::new(
+                Vec2::new(0., 0.2 * GRID_SIZE),
+                Vec2::new(0., -0.2 * GRID_SIZE),
+                Vec2::new(0.2 * GRID_SIZE, 0.),
+            ))),
+            MeshMaterial2d(materials.add(Color::BLACK)),
+            Transform::from_xyz(0.2 * GRID_SIZE, 0., 0.),
+        )],
     ));
 
     // draw a grid
@@ -102,15 +164,42 @@ fn move_vac(time: Res<Time>, mut query: Query<(&mut Transform, &mut Vac, &mut Mo
     // if the timer finished since the last update,
     // make sure we're at the destination location, then
     // choose a new direction
-    let dest = vac.base_pos + vac.heading * GRID_SIZE;
     if timer.is_finished() {
-        transform.translation = dest.extend(0.0);
+        match vac.state {
+            VacMovementState::Moving(base_pos, heading) => {
+                let heading_vec: Vec2 = heading.into();
+                let dest: Vec2 = base_pos + heading_vec * GRID_SIZE;
 
-        vac.base_pos = dest;
-        vac.heading = Vec2::new(0., -1.);
+                // finish moving to the destination point
+                transform.translation = dest.extend(0.0);
+
+                // pick a direction to rotate in
+                vac.state = if rand::random_bool(0.5) {
+                    VacMovementState::Rotating(heading, heading.rotate_cw())
+                } else {
+                    VacMovementState::Rotating(heading, heading.rotate_ccw())
+                };
+            }
+            VacMovementState::Rotating(_, end) => {
+                let pos = transform.translation.xy();
+                vac.state = VacMovementState::Moving(pos, end);
+            }
+        }
     } else {
         let elapsed = timer.elapsed_secs_f64() as f32;
-        let pos = Vec2::lerp(vac.base_pos, dest, elapsed);
-        transform.translation = pos.extend(0.0);
+        match vac.state {
+            VacMovementState::Moving(base_pos, heading) => {
+                let heading_vec: Vec2 = heading.into();
+                let dest: Vec2 = base_pos + heading_vec * GRID_SIZE;
+
+                let pos = Vec2::lerp(base_pos, dest, elapsed);
+                transform.translation = pos.extend(0.0);
+            }
+            VacMovementState::Rotating(start, end) => {
+                let start = Quat::from_rotation_z(start.to_radians());
+                let end = Quat::from_rotation_z(end.to_radians());
+                transform.rotation = Quat::slerp(start, end, elapsed);
+            }
+        }
     }
 }
