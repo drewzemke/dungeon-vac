@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -39,7 +39,8 @@ jobs:
             ${{ runner.os }}-cargo-wasm-
 
       - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.99
+        # only install if not already in cache
+        run: command -v wasm-bindgen &> /dev/null || cargo install wasm-bindgen-cli
 
       - name: Build for WASM
         run: cargo build --release --target wasm32-unknown-unknown
@@ -49,7 +50,7 @@ jobs:
           wasm-bindgen --out-dir ./dist \
             --target web \
             --no-typescript \
-            ./target/wasm32-unknown-unknown/release/dungeon_vac.wasm
+            ./target/wasm32-unknown-unknown/release/dungeon-vac.wasm
 
       - name: Copy HTML
         run: cp index.html ./dist/
@@ -57,7 +58,7 @@ jobs:
       - name: Optimize WASM (optional)
         run: |
           if command -v wasm-opt &> /dev/null; then
-            wasm-opt -Oz -o ./dist/dungeon_vac_bg.wasm ./dist/dungeon_vac_bg.wasm
+            wasm-opt -Oz -o ./dist/dungeon-vac_bg.wasm ./dist/dungeon-vac_bg.wasm
           fi
         continue-on-error: true
 
