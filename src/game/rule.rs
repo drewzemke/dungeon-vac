@@ -31,6 +31,12 @@ impl Rule {
             }
         }
 
+        // if no movement action was fired, fall back to moving forward
+        // NOTE: update this logic when we add categories
+        if actions.is_empty() {
+            actions.push(Action::MoveForward);
+        }
+
         actions
     }
 }
@@ -38,6 +44,15 @@ impl Rule {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compute_actions_default_move() {
+        let rules = [Rule::new(Event::HitWall, Action::TurnRight)];
+        let events = [Event::SpaceLeft];
+
+        let actions = Rule::compute_actions(&rules, &events);
+        assert_eq!(actions, vec![Action::MoveForward]);
+    }
 
     #[test]
     fn compute_actions_single() {

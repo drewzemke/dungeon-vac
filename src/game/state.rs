@@ -29,6 +29,12 @@ impl State {
     /// returns the actions that were taken
     pub fn tick(&mut self, level: &Level, rules: &[Rule]) -> Effect {
         let events = self.evaluate_events(level);
+
+        self.reset_flags();
+        dbg!(&self.vac_pos);
+        dbg!(&self.vac_dir);
+        dbg!(&events);
+
         let actions = Rule::compute_actions(rules, &events);
 
         // HACK: until we expand to have categories, there will only ever
@@ -37,16 +43,19 @@ impl State {
         self.apply_action(actions[0], level)
     }
 
+    fn reset_flags(&mut self) {
+        self.hit_wall_last_tick = false;
+    }
+
     fn apply_action(&mut self, action: Action, level: &Level) -> Effect {
         match action {
             Action::MoveForward => {
                 let orig_pos = self.vac_pos;
                 // check for a wall collision
-                let dest = orig_pos + self.vac_dir.to_vec();
+                let dest = orig_pos + self.vac_dir.to_ivec();
 
                 if level.has_space(dest) {
                     self.vac_pos = dest;
-                    self.hit_wall_last_tick = false;
                     Effect::Moved {
                         from: orig_pos,
                         to: self.vac_pos,
@@ -78,12 +87,12 @@ impl State {
     fn evaluate_events(&self, level: &Level) -> Vec<Event> {
         let mut events = Vec::new();
 
-        let left = self.vac_pos + self.vac_dir.rotate_ccw().to_vec();
+        let left = self.vac_pos + self.vac_dir.rotate_ccw().to_ivec();
         if level.has_space(left) {
             events.push(Event::SpaceLeft);
         }
 
-        let right = self.vac_pos + self.vac_dir.rotate_cw().to_vec();
+        let right = self.vac_pos + self.vac_dir.rotate_cw().to_ivec();
         if level.has_space(right) {
             events.push(Event::SpaceRight);
         }
@@ -93,6 +102,14 @@ impl State {
         }
 
         events
+    }
+
+    pub fn vac_pos(&self) -> IVec2 {
+        self.vac_pos
+    }
+
+    pub fn vac_dir(&self) -> Dir {
+        self.vac_dir
     }
 }
 

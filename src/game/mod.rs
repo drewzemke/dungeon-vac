@@ -1,8 +1,8 @@
-mod action;
-mod event;
-mod level;
-mod rule;
-mod state;
+pub mod action;
+pub mod event;
+pub mod level;
+pub mod rule;
+pub mod state;
 
 // TODO: put this in a different module?
-mod dir;
+pub mod dir;

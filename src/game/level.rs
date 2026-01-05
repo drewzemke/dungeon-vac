@@ -63,6 +63,10 @@ impl Level {
         self.start
     }
 
+    pub fn walls(&self) -> &[IVec2] {
+        &self.walls
+    }
+
     pub fn has_space(&self, pt: impl Into<IVec2>) -> bool {
         let pt: IVec2 = pt.into();
 

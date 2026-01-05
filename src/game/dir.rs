@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use bevy::math::IVec2;
+use bevy::math::{IVec2, Vec2};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Dir {
@@ -38,8 +38,12 @@ impl Dir {
         }
     }
 
-    pub fn to_vec(self) -> IVec2 {
+    pub fn to_ivec(self) -> IVec2 {
         IVec2::from(self)
+    }
+
+    pub fn to_vec(self) -> Vec2 {
+        Vec2::from(self)
     }
 }
 
@@ -50,6 +54,17 @@ impl From<Dir> for IVec2 {
             Dir::North => Self::new(0, 1),
             Dir::West => Self::new(-1, 0),
             Dir::South => Self::new(0, -1),
+        }
+    }
+}
+
+impl From<Dir> for Vec2 {
+    fn from(dir: Dir) -> Self {
+        match dir {
+            Dir::East => Self::new(1., 0.),
+            Dir::North => Self::new(0., 1.),
+            Dir::West => Self::new(-1., 0.),
+            Dir::South => Self::new(0., -1.),
         }
     }
 }
