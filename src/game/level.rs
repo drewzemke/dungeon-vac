@@ -75,12 +75,12 @@ impl Level {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+impl Level {
+    pub const EMPTY_3X3: &str = r"...
+.S.
+...";
 
-    #[test]
-    fn parse_level_from_str() {
-        let map_str = r"#####
+    pub const BIG_LOOP_5X6: &str = r"#####
 #...#
 #.#.#
 #.#.#
@@ -88,7 +88,19 @@ mod tests {
 #####
 ";
 
-        let level = Level::parse(map_str).unwrap();
+    pub const ROOM_4X4: &str = r"####
+#..#
+#S.#
+####";
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_level_from_str() {
+        let level = Level::parse(Level::BIG_LOOP_5X6).unwrap();
 
         assert_eq!(level.dimensions(), (5, 6));
         assert_eq!(level.start(), (2, 1).into());
@@ -96,15 +108,7 @@ mod tests {
 
     #[test]
     fn test_has_space() {
-        let map_str = r"#####
-#...#
-#.#.#
-#.#.#
-#.S.#
-#####
-";
-
-        let level = Level::parse(map_str).unwrap();
+        let level = Level::parse(Level::BIG_LOOP_5X6).unwrap();
 
         assert!(level.has_space((1, 2)));
         assert!(!level.has_space((2, 3)));
