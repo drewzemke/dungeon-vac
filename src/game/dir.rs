@@ -37,6 +37,10 @@ impl Dir {
             Dir::South => -PI / 2.,
         }
     }
+
+    pub fn to_vec(self) -> IVec2 {
+        IVec2::from(self)
+    }
 }
 
 impl From<Dir> for IVec2 {

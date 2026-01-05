@@ -76,10 +76,19 @@ impl Level {
 
 #[cfg(test)]
 impl Level {
+    /// ...
+    /// .S.
+    /// ...
     pub const EMPTY_3X3: &str = r"...
 .S.
 ...";
 
+    /// #####
+    /// #...#
+    /// #.#.#
+    /// #.#.#
+    /// #.S.#
+    /// #####
     pub const BIG_LOOP_5X6: &str = r"#####
 #...#
 #.#.#
@@ -88,6 +97,10 @@ impl Level {
 #####
 ";
 
+    /// ####
+    /// #..#
+    /// #S.#
+    /// ####
     pub const ROOM_4X4: &str = r"####
 #..#
 #S.#
