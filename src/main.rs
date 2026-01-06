@@ -29,9 +29,9 @@ const RULES: [Rule; 2] = [
 ];
 
 const MAP_STR: &str = r"#######
-#...###
+#S..###
 #.#.###
-#S....#
+#.#...#
 #.#.#.#
 #.#...#
 #.###.#
@@ -218,7 +218,35 @@ fn move_vac(
                 let to = Quat::from_rotation_z(to.to_radians());
                 transform.rotation = Quat::slerp(from, to, elapsed);
             }
-            Effect::BumpedWall => {}
+            Effect::BumpedWall => {
+                let (width, height) = map.dimensions();
+                let map_basept = Vec2::new(
+                    -((width / 2) as f32) * GRID_SIZE,
+                    -((height / 2) as f32) * GRID_SIZE,
+                );
+
+                let base_pos = map_basept + state.vac_pos().as_vec2() * GRID_SIZE;
+                let bump_direction = Vec2::from(state.vac_dir());
+
+                let bump_offset = if elapsed < 0.3 {
+                    // phase 1: move forward at usual speed
+                    let progress = elapsed / 0.3;
+                    bump_direction * 0.2 * GRID_SIZE * progress
+                } else if elapsed < 0.7 {
+                    // phase 2: bounce back
+                    let progress = (elapsed - 0.3) / 0.4;
+                    let forward = 0.2 * GRID_SIZE;
+                    let back = -0.15 * GRID_SIZE;
+                    bump_direction * (forward + (back - forward) * progress)
+                } else {
+                    // phase 3: small rebound forward to settle
+                    let progress = (elapsed - 0.7) / 0.3;
+                    let back = -0.15 * GRID_SIZE;
+                    bump_direction * (back + (0.0 - back) * progress)
+                };
+
+                transform.translation = (base_pos + bump_offset).extend(0.1);
+            }
         }
     }
 }
