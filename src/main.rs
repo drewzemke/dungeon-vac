@@ -1,13 +1,17 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use dungeon_vac::game::{
-    action::Action,
-    dir::Dir,
-    event::Event as GameEvent,
-    level::Level,
-    rule::Rule,
-    state::{Effect, State as GameState},
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use dungeon_vac::{
+    game::{
+        action::Action,
+        dir::Dir,
+        event::Event as GameEvent,
+        level::Level,
+        rule::Rule,
+        state::{Effect, State as GameState},
+    },
+    ui::rule_editor::{RuleEditor, rule_editor_ui},
 };
 
 #[derive(Component)]
@@ -59,10 +63,13 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EguiPlugin::default())
         .insert_resource(map)
         .insert_resource(state)
+        .init_resource::<RuleEditor>()
         .add_systems(Startup, setup)
         .add_systems(Update, move_vac)
+        .add_systems(EguiPrimaryContextPass, rule_editor_ui)
         .run();
 }
 
