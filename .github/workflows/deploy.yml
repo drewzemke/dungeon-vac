@@ -21,10 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libxkbcommon-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Cache cargo dependencies
         uses: actions/cache@v4
@@ -35,18 +38,15 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-check-
-
-      - name: Install wasm-server-runner
-        run: command -v wasm-server-runner &> /dev/null || cargo install wasm-server-runner
+            ${{ runner.os }}-cargo-
 
       - name: Clippy
-        run: cargo clippy --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy -- -D warnings
 
       - name: Tests
-        run: cargo test --target wasm32-unknown-unknown
+        run: cargo test
 
   build:
     name: Build WASM
@@ -69,9 +69,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-wasm-
+            ${{ runner.os }}-cargo-
 
       - name: Install wasm-bindgen-cli
         # only install if not already in cache
