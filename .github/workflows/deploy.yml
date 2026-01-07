@@ -39,6 +39,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-check-
 
+      - name: Install wasm-server-runner
+        run: command -v wasm-server-runner &> /dev/null || cargo install wasm-server-runner
+
       - name: Clippy
         run: cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
