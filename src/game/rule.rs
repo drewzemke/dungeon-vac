@@ -1,43 +1,43 @@
-use crate::game::{action::Action, event::Event};
+use crate::game::{command::Command, sensor::Sensor};
 
 #[derive(Debug)]
 pub struct Rule {
-    event: Event,
-    action: Action,
+    sensor: Sensor,
+    command: Command,
 }
 
 impl Rule {
-    pub const fn new(event: Event, action: Action) -> Self {
-        Self { event, action }
+    pub const fn new(sensor: Sensor, command: Command) -> Self {
+        Self { sensor, command }
     }
 
-    pub fn compute_actions(rules: &[Rule], events: &[Event]) -> Vec<Action> {
-        let mut actions = Vec::new();
+    pub fn compute_commands(rules: &[Rule], sensor: &[Sensor]) -> Vec<Command> {
+        let mut commands = Vec::new();
 
         for rule in rules {
-            for event in events {
+            for sensor in sensor {
                 // check for rule match
-                if rule.event != *event {
+                if rule.sensor != *sensor {
                     continue;
                 }
 
-                // filter out actions that already have a member of their category in
-                // the output actions
+                // filter out commands that already have a member of their category in
+                // the output commands
                 // NOTE: this is trivial at the moment as there's only one category
-                let category_already_represented = !actions.is_empty();
+                let category_already_represented = !commands.is_empty();
                 if !category_already_represented {
-                    actions.push(rule.action);
+                    commands.push(rule.command);
                 }
             }
         }
 
-        // if no movement action was fired, fall back to moving forward
+        // if no movement command was fired, fall back to moving forward
         // NOTE: update this logic when we add categories
-        if actions.is_empty() {
-            actions.push(Action::MoveForward);
+        if commands.is_empty() {
+            commands.push(Command::MoveForward);
         }
 
-        actions
+        commands
     }
 }
 
@@ -46,33 +46,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn compute_actions_default_move() {
-        let rules = [Rule::new(Event::HitWall, Action::TurnRight)];
-        let events = [Event::SpaceLeft];
+    fn compute_commands_default_move() {
+        let rules = [Rule::new(Sensor::HitWall, Command::TurnRight)];
+        let sensor = [Sensor::SpaceLeft];
 
-        let actions = Rule::compute_actions(&rules, &events);
-        assert_eq!(actions, vec![Action::MoveForward]);
+        let commands = Rule::compute_commands(&rules, &sensor);
+        assert_eq!(commands, vec![Command::MoveForward]);
     }
 
     #[test]
-    fn compute_actions_single() {
-        let rules = [Rule::new(Event::HitWall, Action::TurnRight)];
-        let events = [Event::HitWall];
+    fn compute_commands_single() {
+        let rules = [Rule::new(Sensor::HitWall, Command::TurnRight)];
+        let sensors = [Sensor::HitWall];
 
-        let actions = Rule::compute_actions(&rules, &events);
-        assert_eq!(actions, vec![Action::TurnRight]);
+        let commands = Rule::compute_commands(&rules, &sensors);
+        assert_eq!(commands, vec![Command::TurnRight]);
     }
 
     #[test]
-    fn compute_actions_same_category() {
+    fn compute_commands_same_category() {
         let rules = [
-            Rule::new(Event::HitWall, Action::TurnRight),
-            Rule::new(Event::HitWall, Action::TurnLeft),
+            Rule::new(Sensor::HitWall, Command::TurnRight),
+            Rule::new(Sensor::HitWall, Command::TurnLeft),
         ];
-        let events = [Event::HitWall];
+        let sensors = [Sensor::HitWall];
 
         // only the first matching rule should trigger
-        let actions = Rule::compute_actions(&rules, &events);
-        assert_eq!(actions, vec![Action::TurnRight]);
+        let commands = Rule::compute_commands(&rules, &sensors);
+        assert_eq!(commands, vec![Command::TurnRight]);
     }
 }

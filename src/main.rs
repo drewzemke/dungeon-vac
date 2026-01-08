@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use dungeon_vac::{
     game::{
-        action::Action,
+        command::Command,
         dir::Dir,
-        event::Event as GameEvent,
         level::Level,
         rule::Rule,
+        sensor::Sensor,
         state::{Effect, State as GameState},
     },
     ui::rule_editor::{RuleEditor, rule_editor_ui},
@@ -28,8 +28,8 @@ impl Vac {
 }
 
 const RULES: [Rule; 2] = [
-    Rule::new(GameEvent::SpaceRight, Action::TurnRight),
-    Rule::new(GameEvent::HitWall, Action::TurnLeft),
+    Rule::new(Sensor::SpaceRight, Command::TurnRight),
+    Rule::new(Sensor::HitWall, Command::TurnLeft),
 ];
 
 const MAP_STR: &str = r"#######

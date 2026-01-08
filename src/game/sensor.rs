@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Event {
+pub enum Sensor {
     HitWall,
     SpaceLeft,
     SpaceRight,
