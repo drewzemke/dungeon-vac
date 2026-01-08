@@ -14,6 +14,7 @@ pub struct State {
     vac_dir: Dir,
 
     hit_wall_last_tick: bool,
+    turned_last_tick: bool,
 }
 
 impl State {
@@ -23,15 +24,28 @@ impl State {
             vac_dir,
 
             hit_wall_last_tick: false,
+            turned_last_tick: false,
         }
     }
 
     pub fn tick(&mut self, level: &Level, rules: &[Rule]) -> Effect {
         let sensors = self.evaluate_sensors(level);
 
+        // Save flag before resetting
+        let turned_last_tick = self.turned_last_tick;
+
         self.reset_flags();
 
-        let commands = Rule::compute_commands(rules, &sensors);
+        let mut commands = Rule::compute_commands(rules, &sensors);
+
+        // Filter out turn commands if we turned last tick
+        if turned_last_tick {
+            commands.retain(|cmd| !matches!(cmd, Command::TurnLeft | Command::TurnRight));
+            // If filtering left us empty, fall back to MoveForward
+            if commands.is_empty() {
+                commands.push(Command::MoveForward);
+            }
+        }
 
         // HACK: until we expand to have categories, there will only ever
         // be one command
@@ -41,6 +55,7 @@ impl State {
 
     fn reset_flags(&mut self) {
         self.hit_wall_last_tick = false;
+        self.turned_last_tick = false;
     }
 
     fn apply_command(&mut self, command: Command, level: &Level) -> Effect {
@@ -64,6 +79,7 @@ impl State {
             Command::TurnRight => {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_cw();
+                self.turned_last_tick = true;
                 Effect::Rotated {
                     from: orig_dir,
                     to: self.vac_dir,
@@ -72,6 +88,7 @@ impl State {
             Command::TurnLeft => {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_ccw();
+                self.turned_last_tick = true;
                 Effect::Rotated {
                     from: orig_dir,
                     to: self.vac_dir,
@@ -215,5 +232,26 @@ mod tests {
                 to: Dir::North
             }
         );
+    }
+
+    #[test]
+    fn test_no_consecutive_turns() {
+        let level = Level::parse(Level::ROOM_4X4).unwrap();
+        let mut state = State::new((1, 1), Dir::East);
+
+        // Rule that always tries to turn
+        let rules = [Rule::new(Sensor::SpaceLeft, Command::TurnRight)];
+
+        // First tick should turn
+        let effect = state.tick(&level, &rules);
+        assert!(matches!(effect, Effect::Rotated { .. }));
+
+        // Second tick should move forward (restriction enforced)
+        let effect = state.tick(&level, &rules);
+        assert!(!matches!(effect, Effect::Rotated { .. }));
+
+        // Third tick can turn again
+        let effect = state.tick(&level, &rules);
+        assert!(matches!(effect, Effect::Rotated { .. }));
     }
 }
