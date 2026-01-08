@@ -1,20 +1,25 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui};
 
+use crate::game::{command::Command as GameCommand, rule::Rule, sensor::Sensor};
+
 #[derive(Default, Resource)]
 pub struct RuleEditor {
     pub selected_sensor: usize,
     pub selected_command: usize,
 }
 
-pub fn rule_editor_ui(mut contexts: EguiContexts, mut editor: ResMut<RuleEditor>) {
-    let sensors = [
-        "WHEN hit wall",
-        "WHEN space left",
-        "WHEN space right",
-        "WHEN start",
-    ];
-    let commands = ["THEN turn left", "THEN turn right", "THEN clean on"];
+// FIXME: this isn't the right place for this
+#[derive(Default, Resource, Deref, DerefMut)]
+pub struct Rules(pub Vec<Rule>);
+
+pub fn rule_editor_ui(
+    mut contexts: EguiContexts,
+    mut editor: ResMut<RuleEditor>,
+    mut rules: ResMut<Rules>,
+) {
+    let sensors = [Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight];
+    let commands = [GameCommand::TurnRight, GameCommand::TurnLeft];
 
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -48,10 +53,28 @@ pub fn rule_editor_ui(mut contexts: EguiContexts, mut editor: ResMut<RuleEditor>
 
             ui.add_space(8.0);
             if ui.button("Add Rule").clicked() {
-                println!(
-                    "Add rule: {} -> {}",
-                    sensors[editor.selected_sensor], commands[editor.selected_command]
-                );
+                let sensor = sensors[editor.selected_sensor];
+                let command = commands[editor.selected_command];
+                rules.push(Rule::new(sensor, command));
+            }
+
+            ui.separator();
+
+            ui.label("Rules:");
+            ui.add_space(8.0);
+
+            let mut remove_idx = None;
+            for (idx, rule) in rules.0.iter().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.label(format!("{} {}", rule.sensor(), rule.command()));
+                    if ui.button("X").clicked() {
+                        remove_idx = Some(idx);
+                    }
+                });
+            }
+
+            if let Some(idx) = remove_idx {
+                rules.remove(idx);
             }
         });
 }

@@ -11,7 +11,7 @@ use dungeon_vac::{
         sensor::Sensor,
         state::{Effect, State as GameState},
     },
-    ui::rule_editor::{RuleEditor, rule_editor_ui},
+    ui::rule_editor::{RuleEditor, Rules, rule_editor_ui},
 };
 
 #[derive(Component)]
@@ -66,6 +66,7 @@ fn main() {
         .add_plugins(EguiPlugin::default())
         .insert_resource(map)
         .insert_resource(state)
+        .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<RuleEditor>()
         .add_systems(Startup, setup)
         .add_systems(Update, move_vac)
@@ -86,6 +87,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut state: ResMut<State>,
+    rules: Res<Rules>,
     map: Res<Map>,
 ) {
     commands.spawn(Camera2d);
@@ -141,7 +143,7 @@ fn setup(
     let initial_pos = map_basept + state.vac_pos().as_vec2() * GRID_SIZE;
 
     // execute initial tick
-    let effect = state.tick(&map, &RULES);
+    let effect = state.tick(&map, &rules);
     let vac = Vac::new(effect);
 
     // spawn a circle with a triangle to show heading
@@ -177,6 +179,7 @@ impl MovementTimer {
 fn move_vac(
     time: Res<Time>,
     map: Res<Map>,
+    rules: ResMut<Rules>,
     mut state: ResMut<State>,
     mut query: Query<(&mut Transform, &mut Vac, &mut MovementTimer)>,
 ) {
@@ -202,7 +205,7 @@ fn move_vac(
         transform.translation = prev_pos.extend(0.1);
 
         // update state and store in movement state
-        let effect = state.tick(&map, &RULES);
+        let effect = state.tick(&map, &rules);
         vac.effect = effect;
     } else {
         let elapsed = timer.elapsed().as_millis() as f32 / STEP_TIME_MS as f32;

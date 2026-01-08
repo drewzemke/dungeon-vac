@@ -11,6 +11,14 @@ impl Rule {
         Self { sensor, command }
     }
 
+    pub fn sensor(&self) -> Sensor {
+        self.sensor
+    }
+
+    pub fn command(&self) -> Command {
+        self.command
+    }
+
     pub fn compute_commands(rules: &[Rule], sensor: &[Sensor]) -> Vec<Command> {
         let mut commands = Vec::new();
 
