@@ -31,9 +31,6 @@ impl State {
         let events = self.evaluate_events(level);
 
         self.reset_flags();
-        dbg!(&self.vac_pos);
-        dbg!(&self.vac_dir);
-        dbg!(&events);
 
         let actions = Rule::compute_actions(rules, &events);
 
