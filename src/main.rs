@@ -6,7 +6,7 @@ use dungeon_vac::{
     game::{
         command::Command,
         dir::Dir,
-        level::Level,
+        map::Map as GameMap,
         rule::Rule,
         sensor::Sensor,
         state::{Effect, State as GameState},
@@ -44,13 +44,13 @@ const MAP_STR: &str = r"#######
 ";
 
 #[derive(Resource, Deref)]
-struct Map(Level);
+struct Map(GameMap);
 
 #[derive(Resource, Deref, DerefMut)]
 struct State(GameState);
 
 fn main() {
-    let map = Map(Level::parse(MAP_STR).unwrap());
+    let map = Map(GameMap::parse(MAP_STR).unwrap());
     let state = State(GameState::new(map.start(), Dir::East));
 
     App::new()

@@ -1,6 +1,6 @@
 use bevy::math::IVec2;
 
-use crate::game::{command::Command, dir::Dir, level::Level, rule::Rule, sensor::Sensor};
+use crate::game::{command::Command, dir::Dir, map::Map, rule::Rule, sensor::Sensor};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
@@ -28,8 +28,8 @@ impl State {
         }
     }
 
-    pub fn tick(&mut self, level: &Level, rules: &[Rule]) -> Effect {
-        let sensors = self.evaluate_sensors(level);
+    pub fn tick(&mut self, map: &Map, rules: &[Rule]) -> Effect {
+        let sensors = self.evaluate_sensors(map);
 
         // Save flag before resetting
         let turned_last_tick = self.turned_last_tick;
@@ -50,7 +50,7 @@ impl State {
         // HACK: until we expand to have categories, there will only ever
         // be one command
         assert_eq!(commands.len(), 1);
-        self.apply_command(commands[0], level)
+        self.apply_command(commands[0], map)
     }
 
     fn reset_flags(&mut self) {
@@ -58,14 +58,14 @@ impl State {
         self.turned_last_tick = false;
     }
 
-    fn apply_command(&mut self, command: Command, level: &Level) -> Effect {
+    fn apply_command(&mut self, command: Command, map: &Map) -> Effect {
         match command {
             Command::MoveForward => {
                 let orig_pos = self.vac_pos;
                 // check for a wall collision
                 let dest = orig_pos + self.vac_dir.to_ivec();
 
-                if level.has_space(dest) {
+                if map.has_space(dest) {
                     self.vac_pos = dest;
                     Effect::Moved {
                         from: orig_pos,
@@ -97,16 +97,16 @@ impl State {
         }
     }
 
-    fn evaluate_sensors(&self, level: &Level) -> Vec<Sensor> {
+    fn evaluate_sensors(&self, map: &Map) -> Vec<Sensor> {
         let mut sensors = Vec::new();
 
         let left = self.vac_pos + self.vac_dir.rotate_ccw().to_ivec();
-        if level.has_space(left) {
+        if map.has_space(left) {
             sensors.push(Sensor::SpaceLeft);
         }
 
         let right = self.vac_pos + self.vac_dir.rotate_cw().to_ivec();
-        if level.has_space(right) {
+        if map.has_space(right) {
             sensors.push(Sensor::SpaceRight);
         }
 
@@ -134,26 +134,26 @@ mod tests {
 
     #[test]
     fn test_evaluate_sensors() {
-        let level = Level::parse(Level::ROOM_4X4).unwrap();
+        let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
         // given that setup, there should be space on the left but not on the right
-        let sensors = state.evaluate_sensors(&level);
+        let sensors = state.evaluate_sensors(&map);
         assert!(sensors.contains(&Sensor::SpaceLeft));
         assert!(!sensors.contains(&Sensor::SpaceRight));
         assert!(!sensors.contains(&Sensor::HitWall));
 
         state.hit_wall_last_tick = true;
-        let sensors = state.evaluate_sensors(&level);
+        let sensors = state.evaluate_sensors(&map);
         assert!(sensors.contains(&Sensor::HitWall));
     }
 
     #[test]
     fn test_apply_commands_no_walls() {
-        let level = Level::parse(Level::EMPTY_3X3).unwrap();
+        let map = Map::parse(Map::EMPTY_3X3).unwrap();
         let mut state = State::new((0, 0), Dir::East);
 
-        let effect = state.apply_command(Command::MoveForward, &level);
+        let effect = state.apply_command(Command::MoveForward, &map);
         assert_eq!(state.vac_pos, (1, 0).into());
         assert_eq!(state.vac_dir, Dir::East);
         assert_eq!(
@@ -164,7 +164,7 @@ mod tests {
             }
         );
 
-        let effect = state.apply_command(Command::TurnRight, &level);
+        let effect = state.apply_command(Command::TurnRight, &map);
         assert_eq!(state.vac_pos, (1, 0).into());
         assert_eq!(state.vac_dir, Dir::South);
         assert_eq!(
@@ -175,7 +175,7 @@ mod tests {
             }
         );
 
-        let effect = state.apply_command(Command::TurnLeft, &level);
+        let effect = state.apply_command(Command::TurnLeft, &map);
         assert_eq!(state.vac_pos, (1, 0).into());
         assert_eq!(state.vac_dir, Dir::East);
         assert_eq!(
@@ -189,11 +189,11 @@ mod tests {
 
     #[test]
     fn test_apply_commands_with_walls() {
-        let level = Level::parse(Level::ROOM_4X4).unwrap();
+        let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
         // there's one space to move to in this direction before we hit a wall
-        let effect = state.apply_command(Command::MoveForward, &level);
+        let effect = state.apply_command(Command::MoveForward, &map);
         assert_eq!(state.vac_pos, (2, 1).into());
         assert!(!state.hit_wall_last_tick);
         assert_eq!(
@@ -205,7 +205,7 @@ mod tests {
         );
 
         // shouldn't be able to move forward again
-        let effect = state.apply_command(Command::MoveForward, &level);
+        let effect = state.apply_command(Command::MoveForward, &map);
         assert_eq!(state.vac_pos, (2, 1).into());
         assert!(state.hit_wall_last_tick);
         assert_eq!(effect, Effect::BumpedWall);
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_tick() {
-        let level = Level::parse(Level::ROOM_4X4).unwrap();
+        let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
         let rules = [
@@ -223,7 +223,7 @@ mod tests {
 
         // there's space on the left but not the right,
         // so we should turn left
-        let effect = state.tick(&level, &rules);
+        let effect = state.tick(&map, &rules);
         assert_eq!(state.vac_dir, Dir::North);
         assert_eq!(
             effect,
@@ -236,22 +236,22 @@ mod tests {
 
     #[test]
     fn test_no_consecutive_turns() {
-        let level = Level::parse(Level::ROOM_4X4).unwrap();
+        let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
         // Rule that always tries to turn
         let rules = [Rule::new(Sensor::SpaceLeft, Command::TurnRight)];
 
         // First tick should turn
-        let effect = state.tick(&level, &rules);
+        let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Rotated { .. }));
 
         // Second tick should move forward (restriction enforced)
-        let effect = state.tick(&level, &rules);
+        let effect = state.tick(&map, &rules);
         assert!(!matches!(effect, Effect::Rotated { .. }));
 
         // Third tick can turn again
-        let effect = state.tick(&level, &rules);
+        let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Rotated { .. }));
     }
 }

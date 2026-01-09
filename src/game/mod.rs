@@ -1,5 +1,5 @@
 pub mod command;
-pub mod level;
+pub mod map;
 pub mod rule;
 pub mod sensor;
 pub mod state;

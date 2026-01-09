@@ -1,7 +1,7 @@
 use bevy::math::IVec2;
 
 #[derive(Debug)]
-pub struct Level {
+pub struct Map {
     walls: Vec<IVec2>,
     start: IVec2,
 
@@ -9,7 +9,7 @@ pub struct Level {
     height: usize,
 }
 
-impl Default for Level {
+impl Default for Map {
     fn default() -> Self {
         Self {
             walls: Vec::new(),
@@ -20,7 +20,7 @@ impl Default for Level {
     }
 }
 
-impl Level {
+impl Map {
     pub fn parse(str: &str) -> Result<Self, String> {
         let mut walls = Vec::new();
         let mut start = (0, 0).into();
@@ -39,7 +39,7 @@ impl Level {
                     }
                     '.' => {}
                     c => {
-                        return Err(format!("Unrecognized character in level string: '{c}'"));
+                        return Err(format!("Unrecognized character in map string: '{c}'"));
                     }
                 }
             }
@@ -79,7 +79,7 @@ impl Level {
 }
 
 #[cfg(test)]
-impl Level {
+impl Map {
     /// ...
     /// .S.
     /// ...
@@ -116,24 +116,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_level_from_str() {
-        let level = Level::parse(Level::BIG_LOOP_5X6).unwrap();
+    fn parse_map_from_str() {
+        let map = Map::parse(Map::BIG_LOOP_5X6).unwrap();
 
-        assert_eq!(level.dimensions(), (5, 6));
-        assert_eq!(level.start(), (2, 1).into());
+        assert_eq!(map.dimensions(), (5, 6));
+        assert_eq!(map.start(), (2, 1).into());
     }
 
     #[test]
     fn test_has_space() {
-        let level = Level::parse(Level::BIG_LOOP_5X6).unwrap();
+        let map = Map::parse(Map::BIG_LOOP_5X6).unwrap();
 
-        assert!(level.has_space((1, 2)));
-        assert!(!level.has_space((2, 3)));
+        assert!(map.has_space((1, 2)));
+        assert!(!map.has_space((2, 3)));
 
         // out of bounds
-        assert!(!level.has_space((-1, 0)));
-        assert!(!level.has_space((1, -1)));
-        assert!(!level.has_space((10, 1)));
-        assert!(!level.has_space((1, 10)));
+        assert!(!map.has_space((-1, 0)));
+        assert!(!map.has_space((1, -1)));
+        assert!(!map.has_space((10, 1)));
+        assert!(!map.has_space((1, 10)));
     }
 }
