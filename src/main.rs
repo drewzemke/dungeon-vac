@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+
 use dungeon_vac::{
     core::{command::Command, rule::Rule, sensor::Sensor},
     game::{map::MapPlugin, vac::VacPlugin},
     ui::{
+        camera::CameraPlugin,
         grid::GridPlugin,
         rule_editor::{RuleEditor, Rules, rule_editor_ui},
     },
@@ -26,16 +28,12 @@ fn main() {
             ..default()
         }))
         .add_plugins(EguiPlugin::default())
-        .add_plugins(MapPlugin)
+        .add_plugins(CameraPlugin)
         .add_plugins(GridPlugin)
+        .add_plugins(MapPlugin)
         .add_plugins(VacPlugin)
         .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<RuleEditor>()
-        .add_systems(Startup, setup_camera)
         .add_systems(EguiPrimaryContextPass, rule_editor_ui)
         .run();
-}
-
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
 }
