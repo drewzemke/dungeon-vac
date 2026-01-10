@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui};
 
-use crate::game::{command::Command as GameCommand, rule::Rule, sensor::Sensor};
+use crate::core::{command::Command as GameCommand, rule::Rule, sensor::Sensor};
 
 #[derive(Default, Resource)]
 pub struct RuleEditor {

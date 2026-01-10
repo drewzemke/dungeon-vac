@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use dungeon_vac::{
-    game::{
+    core::{
         command::Command,
         dir::Dir,
         map::Map as GameMap,

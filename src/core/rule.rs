@@ -1,4 +1,4 @@
-use crate::game::{command::Command, sensor::Sensor};
+use crate::core::{command::Command, sensor::Sensor};
 
 #[derive(Debug)]
 pub struct Rule {

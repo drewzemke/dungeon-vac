@@ -1,6 +1,6 @@
 use bevy::math::IVec2;
 
-use crate::game::{command::Command, dir::Dir, map::Map, rule::Rule, sensor::Sensor};
+use crate::core::{command::Command, dir::Dir, map::Map, rule::Rule, sensor::Sensor};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
@@ -128,7 +128,7 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::rule::Rule;
+    use crate::core::rule::Rule;
 
     use super::*;
 
