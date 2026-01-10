@@ -11,8 +11,14 @@ use dungeon_vac::{
         sensor::Sensor,
         state::{Effect, State as GameState},
     },
-    game::map::{Map, MapPlugin, MapSetup},
-    ui::rule_editor::{RuleEditor, Rules, rule_editor_ui},
+    game::{
+        constants::GRID_SIZE,
+        map::{Map, MapPlugin, MapSetup},
+    },
+    ui::{
+        grid::GridPlugin,
+        rule_editor::{RuleEditor, Rules, rule_editor_ui},
+    },
 };
 
 #[derive(Component)]
@@ -55,7 +61,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Dungeon Vac".to_string(),
-                resolution: (800, 600).into(),
+                resolution: (900, 600).into(),
                 position: WindowPosition::Centered(MonitorSelection::Primary),
                 ..default()
             }),
@@ -63,6 +69,7 @@ fn main() {
         }))
         .add_plugins(EguiPlugin::default())
         .add_plugins(MapPlugin)
+        .add_plugins(GridPlugin)
         .insert_resource(state)
         .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<RuleEditor>()
@@ -72,12 +79,7 @@ fn main() {
         .run();
 }
 
-const NUM_GRID_LINES: i64 = 10;
-const GRID_SIZE: f32 = 50.;
 const STEP_TIME_MS: u64 = 500;
-
-const RED: Color = Color::hsl(0., 0.95, 0.7);
-const BLUE: Color = Color::hsl(200., 0.95, 0.7);
 
 fn setup(
     mut commands: Commands,
@@ -88,41 +90,6 @@ fn setup(
     map: Query<&Map>,
 ) {
     commands.spawn(Camera2d);
-
-    // draw a grid
-    let horizontal_lines = (-NUM_GRID_LINES..NUM_GRID_LINES)
-        .map(|i| {
-            meshes.add(Polyline2d::new([
-                Vec2::new(-(NUM_GRID_LINES as f32) * GRID_SIZE, i as f32 * GRID_SIZE),
-                Vec2::new(NUM_GRID_LINES as f32 * GRID_SIZE, i as f32 * GRID_SIZE),
-            ]))
-        })
-        .collect::<Vec<_>>();
-
-    let vertical_lines = (-NUM_GRID_LINES..NUM_GRID_LINES)
-        .map(|i| {
-            meshes.add(Polyline2d::new([
-                Vec2::new(i as f32 * GRID_SIZE, -(NUM_GRID_LINES as f32) * GRID_SIZE),
-                Vec2::new(i as f32 * GRID_SIZE, NUM_GRID_LINES as f32 * GRID_SIZE),
-            ]))
-        })
-        .collect::<Vec<_>>();
-
-    for mesh in horizontal_lines {
-        commands.spawn((
-            Transform::from_xyz(0., 0., -0.1),
-            Mesh2d(mesh),
-            MeshMaterial2d(materials.add(RED)),
-        ));
-    }
-
-    for mesh in vertical_lines {
-        commands.spawn((
-            Transform::from_xyz(0., 0., -0.1),
-            Mesh2d(mesh),
-            MeshMaterial2d(materials.add(BLUE)),
-        ));
-    }
 
     let map = map.single().unwrap();
 
