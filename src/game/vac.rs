@@ -8,6 +8,7 @@ use crate::{
     game::{
         constants::GRID_SIZE,
         map::{Map, MapSetup},
+        simulation::Simulation,
     },
     ui::rule_editor::Rules,
 };
@@ -82,11 +83,16 @@ fn setup_vac(
 }
 
 fn move_vac(
-    time: Res<Time>,
-    rules: ResMut<Rules>,
     mut query: Query<(&mut Transform, &mut Vac, &mut VacMovementTimer, &mut State)>,
     map: Query<&Map>,
+    rules: ResMut<Rules>,
+    time: Res<Time>,
+    sim: Res<Simulation>,
 ) {
+    if !sim.is_running() {
+        return;
+    }
+
     let (mut transform, mut vac, mut timer, mut state) = query.single_mut().unwrap();
     let map = map.single().unwrap();
     timer.tick(time.delta());
