@@ -1,6 +1,6 @@
 use bevy::math::IVec2;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Map {
     walls: Vec<IVec2>,
     start: IVec2,

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::game::events::ResetLevel;
+
 #[derive(Default, Resource)]
 pub struct Simulation {
     started: bool,
@@ -22,5 +24,27 @@ impl Simulation {
 
     pub fn stop(&mut self) {
         self.running = false;
+    }
+
+    pub fn reset(&mut self) {
+        self.started = false;
+        self.running = false;
+    }
+}
+
+fn reset_sim(mut sim: ResMut<Simulation>, mut reader: MessageReader<ResetLevel>) {
+    if reader.read().count() > 0 {
+        sim.reset();
+    }
+}
+
+pub struct SimulationPlugin;
+
+impl Plugin for SimulationPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(Simulation::default())
+            // TODO: put this `add_message` elsewhere?
+            .add_message::<ResetLevel>()
+            .add_systems(Update, reset_sim);
     }
 }

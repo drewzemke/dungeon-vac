@@ -2,10 +2,11 @@ use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui};
 
 use crate::{
-    core::{command::Command as GameCommand, rule::Rule, sensor::Sensor},
-    game::simulation::Simulation,
+    core::rule::Rule,
+    game::{events::ResetLevel, level::CurrentLevel, simulation::Simulation},
 };
 
+/// UI state for rule creation
 #[derive(Default, Resource)]
 pub struct RuleEditor {
     pub selected_sensor: usize,
@@ -21,9 +22,11 @@ pub fn rule_editor_ui(
     mut editor: ResMut<RuleEditor>,
     mut rules: ResMut<Rules>,
     mut sim: ResMut<Simulation>,
+    level: Res<CurrentLevel>,
+    mut writer: MessageWriter<ResetLevel>,
 ) {
-    let sensors = [Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight];
-    let commands = [GameCommand::TurnRight, GameCommand::TurnLeft];
+    let sensors = level.sensors();
+    let commands = level.commands();
 
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -39,15 +42,21 @@ pub fn rule_editor_ui(
             ui.horizontal(|ui| {
                 ui.add_enabled_ui(!running, |ui| {
                     if ui.button("Start").clicked() {
+                        // TODO: turn this into an event
                         sim.start();
                     }
                 });
 
                 ui.add_enabled_ui(running, |ui| {
                     if ui.button("Stop").clicked() {
+                        // TODO: turn this into an event
                         sim.stop();
                     }
                 });
+
+                if ui.button("Reset").clicked() {
+                    writer.write(ResetLevel);
+                }
             });
 
             ui.separator();
@@ -56,16 +65,24 @@ pub fn rule_editor_ui(
             ui.add_space(8.0);
 
             ui.add_enabled_ui(can_edit, |ui| {
+                let selected_sensor = sensors
+                    .get(editor.selected_sensor)
+                    .map(|s| s.to_string())
+                    .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Sensor")
-                    .selected_text(sensors[editor.selected_sensor])
+                    .selected_text(selected_sensor)
                     .show_ui(ui, |ui| {
                         for (i, sensor) in sensors.iter().enumerate() {
                             ui.selectable_value(&mut editor.selected_sensor, i, *sensor);
                         }
                     });
 
+                let selected_command = commands
+                    .get(editor.selected_command)
+                    .map(|c| c.to_string())
+                    .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Command")
-                    .selected_text(commands[editor.selected_command])
+                    .selected_text(selected_command)
                     .show_ui(ui, |ui| {
                         for (i, command) in commands.iter().enumerate() {
                             ui.selectable_value(&mut editor.selected_command, i, *command);

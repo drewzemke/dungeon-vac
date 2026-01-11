@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 use dungeon_vac::{
-    core::{command::Command, rule::Rule, sensor::Sensor},
-    game::{map::MapPlugin, simulation::Simulation, vac::VacPlugin},
+    core::{command::Command, level::Level, map::Map, rule::Rule, sensor::Sensor},
+    game::{level::CurrentLevel, map::MapPlugin, simulation::SimulationPlugin, vac::VacPlugin},
     ui::{
         camera::CameraPlugin,
         grid::GridPlugin,
@@ -16,7 +16,24 @@ const RULES: [Rule; 2] = [
     Rule::new(Sensor::HitWall, Command::TurnLeft),
 ];
 
+const MAP_STR: &str = r"#######
+#S..###
+#.#.###
+#.#...#
+#.#.#.#
+#.#...#
+#.###.#
+#.....#
+#######
+";
+
 fn main() {
+    let first_level = Level::new(
+        Map::parse(MAP_STR).unwrap(),
+        Vec::from([Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight]),
+        Vec::from([Command::TurnRight, Command::TurnLeft]),
+    );
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -30,9 +47,13 @@ fn main() {
         .add_plugins(EguiPlugin::default())
         .add_plugins(CameraPlugin)
         .add_plugins(GridPlugin)
+        //
+        // HELP: do we need both of these?
+        .insert_resource(CurrentLevel::new(first_level))
         .add_plugins(MapPlugin)
+        //
         .add_plugins(VacPlugin)
-        .insert_resource(Simulation::default())
+        .add_plugins(SimulationPlugin)
         .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<RuleEditor>()
         .add_systems(EguiPrimaryContextPass, rule_editor_ui)
