@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 #[derive(Default, Resource)]
 pub struct Simulation {
+    started: bool,
     running: bool,
 }
 
@@ -10,7 +11,12 @@ impl Simulation {
         self.running
     }
 
+    pub fn has_started(&self) -> bool {
+        self.started
+    }
+
     pub fn start(&mut self) {
+        self.started = true;
         self.running = true;
     }
 
