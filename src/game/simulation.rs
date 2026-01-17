@@ -46,3 +46,5 @@ impl Plugin for SimulationPlugin {
             .add_systems(Update, reset_sim);
     }
 }
+
+// TODO: stop simulation on level complete event

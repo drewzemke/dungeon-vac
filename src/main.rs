@@ -10,7 +10,7 @@ use dungeon_vac::{
     ui::{
         camera::CameraPlugin,
         grid::GridPlugin,
-        rule_editor::{RuleEditor, Rules, rule_editor_ui},
+        rule_editor::{Rules, UiState, on_level_complete, rule_editor_ui},
     },
 };
 
@@ -59,7 +59,10 @@ fn main() {
         .add_plugins(SimulationPlugin)
         .add_plugins(EventsPlugin)
         .insert_resource(Rules(Vec::from(RULES)))
-        .init_resource::<RuleEditor>()
+        .init_resource::<UiState>()
+        // FIXME: extract to UI plugin
         .add_systems(EguiPrimaryContextPass, rule_editor_ui)
+        .add_systems(Update, on_level_complete)
+        //
         .run();
 }

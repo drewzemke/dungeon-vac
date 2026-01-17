@@ -3,14 +3,20 @@ use bevy_egui::{EguiContexts, egui};
 
 use crate::{
     core::rule::Rule,
-    game::{events::ResetLevel, level::CurrentLevel, simulation::Simulation},
+    game::{
+        events::{LevelComplete, ResetLevel},
+        level::CurrentLevel,
+        simulation::Simulation,
+    },
 };
 
 /// UI state for rule creation
 #[derive(Default, Resource)]
-pub struct RuleEditor {
-    pub selected_sensor: usize,
-    pub selected_command: usize,
+pub struct UiState {
+    selected_sensor: usize,
+    selected_command: usize,
+
+    level_complete: bool,
 }
 
 // FIXME: this isn't the right place for this
@@ -19,7 +25,7 @@ pub struct Rules(pub Vec<Rule>);
 
 pub fn rule_editor_ui(
     mut contexts: EguiContexts,
-    mut editor: ResMut<RuleEditor>,
+    mut state: ResMut<UiState>,
     mut rules: ResMut<Rules>,
     mut sim: ResMut<Simulation>,
     level: Res<CurrentLevel>,
@@ -66,33 +72,33 @@ pub fn rule_editor_ui(
 
             ui.add_enabled_ui(can_edit, |ui| {
                 let selected_sensor = sensors
-                    .get(editor.selected_sensor)
+                    .get(state.selected_sensor)
                     .map(|s| s.to_string())
                     .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Sensor")
                     .selected_text(selected_sensor)
                     .show_ui(ui, |ui| {
                         for (i, sensor) in sensors.iter().enumerate() {
-                            ui.selectable_value(&mut editor.selected_sensor, i, *sensor);
+                            ui.selectable_value(&mut state.selected_sensor, i, *sensor);
                         }
                     });
 
                 let selected_command = commands
-                    .get(editor.selected_command)
+                    .get(state.selected_command)
                     .map(|c| c.to_string())
                     .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Command")
                     .selected_text(selected_command)
                     .show_ui(ui, |ui| {
                         for (i, command) in commands.iter().enumerate() {
-                            ui.selectable_value(&mut editor.selected_command, i, *command);
+                            ui.selectable_value(&mut state.selected_command, i, *command);
                         }
                     });
 
                 ui.add_space(8.0);
                 if ui.button("Add Rule").clicked() {
-                    let sensor = sensors[editor.selected_sensor];
-                    let command = commands[editor.selected_command];
+                    let sensor = sensors[state.selected_sensor];
+                    let command = commands[state.selected_command];
                     rules.push(Rule::new(sensor, command));
                 }
             });
@@ -117,5 +123,16 @@ pub fn rule_editor_ui(
             if let Some(idx) = remove_idx {
                 rules.remove(idx);
             }
+
+            if state.level_complete {
+                ui.separator();
+                ui.label("Level Complete!");
+            }
         });
+}
+
+pub fn on_level_complete(mut reader: MessageReader<LevelComplete>, mut state: ResMut<UiState>) {
+    for _ in reader.read() {
+        state.level_complete = true;
+    }
 }
