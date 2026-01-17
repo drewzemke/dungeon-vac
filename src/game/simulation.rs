@@ -43,8 +43,6 @@ pub struct SimulationPlugin;
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Simulation::default())
-            // TODO: put this `add_message` elsewhere?
-            .add_message::<ResetLevel>()
             .add_systems(Update, reset_sim);
     }
 }

@@ -7,7 +7,7 @@ use crate::{
     },
     game::{
         constants::GRID_SIZE,
-        events::ResetLevel,
+        events::{LevelComplete, ResetLevel},
         map::{Map, MapSetup},
         simulation::Simulation,
     },
@@ -90,6 +90,7 @@ fn move_vac(
     rules: ResMut<Rules>,
     time: Res<Time>,
     sim: Res<Simulation>,
+    mut writer: MessageWriter<LevelComplete>,
 ) {
     if !sim.is_running() {
         return;
@@ -145,7 +146,7 @@ fn move_vac(
                 transform.translation = map.to_game_world(state.vac_pos().as_vec2() + bump_offset);
             }
             Effect::Exited => {
-                // TODO: emit exited event
+                writer.write(LevelComplete);
             }
         }
     }

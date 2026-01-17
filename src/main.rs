@@ -3,7 +3,10 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 use dungeon_vac::{
     core::{command::Command, level::Level, map::Map, rule::Rule, sensor::Sensor},
-    game::{level::CurrentLevel, map::MapPlugin, simulation::SimulationPlugin, vac::VacPlugin},
+    game::{
+        events::EventsPlugin, level::CurrentLevel, map::MapPlugin, simulation::SimulationPlugin,
+        vac::VacPlugin,
+    },
     ui::{
         camera::CameraPlugin,
         grid::GridPlugin,
@@ -54,6 +57,7 @@ fn main() {
         //
         .add_plugins(VacPlugin)
         .add_plugins(SimulationPlugin)
+        .add_plugins(EventsPlugin)
         .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<RuleEditor>()
         .add_systems(EguiPrimaryContextPass, rule_editor_ui)
