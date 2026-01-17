@@ -4,6 +4,7 @@ use bevy::math::IVec2;
 pub struct Map {
     walls: Vec<IVec2>,
     start: IVec2,
+    exit: IVec2,
 
     width: usize,
     height: usize,
@@ -14,6 +15,7 @@ impl Default for Map {
         Self {
             walls: Vec::new(),
             start: (0, 0).into(),
+            exit: (4, 4).into(),
             width: 5,
             height: 5,
         }
@@ -24,6 +26,7 @@ impl Map {
     pub fn parse(str: &str) -> Result<Self, String> {
         let mut walls = Vec::new();
         let mut start = (0, 0).into();
+        let mut exit = (0, 0).into();
 
         let width = str.lines().next().ok_or("String is empty.")?.len();
         let height = str.lines().count();
@@ -37,6 +40,9 @@ impl Map {
                     'S' => {
                         start = (col_idx as i32, height as i32 - row_idx as i32 - 1).into();
                     }
+                    'E' => {
+                        exit = (col_idx as i32, height as i32 - row_idx as i32 - 1).into();
+                    }
                     '.' => {}
                     c => {
                         return Err(format!("Unrecognized character in map string: '{c}'"));
@@ -48,6 +54,7 @@ impl Map {
         Ok(Self {
             walls,
             start,
+            exit,
 
             width,
             height,
@@ -61,6 +68,10 @@ impl Map {
 
     pub fn start(&self) -> IVec2 {
         self.start
+    }
+
+    pub fn exit(&self) -> IVec2 {
+        self.exit
     }
 
     pub fn walls(&self) -> &[IVec2] {
@@ -88,13 +99,13 @@ impl Map {
 ...";
 
     /// #####
-    /// #...#
+    /// #..E#
     /// #.#.#
     /// #.#.#
     /// #.S.#
     /// #####
     pub const BIG_LOOP_5X6: &str = r"#####
-#...#
+#..E#
 #.#.#
 #.#.#
 #.S.#
@@ -102,11 +113,11 @@ impl Map {
 ";
 
     /// ####
-    /// #..#
+    /// #.E#
     /// #S.#
     /// ####
     pub const ROOM_4X4: &str = r"####
-#..#
+#.E#
 #S.#
 ####";
 }
@@ -121,6 +132,7 @@ mod tests {
 
         assert_eq!(map.dimensions(), (5, 6));
         assert_eq!(map.start(), (2, 1).into());
+        assert_eq!(map.exit(), (3, 4).into());
     }
 
     #[test]
