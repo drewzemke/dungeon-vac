@@ -7,6 +7,7 @@ pub enum Effect {
     Moved { from: IVec2, to: IVec2 },
     BumpedWall,
     Rotated { from: Dir, to: Dir },
+    Exited,
 }
 
 pub struct State {
@@ -29,16 +30,22 @@ impl State {
     }
 
     pub fn tick(&mut self, map: &Map, rules: &[Rule]) -> Effect {
+        // environment check
+        let exit = self.evaluate_environment(map);
+        if exit {
+            return Effect::Exited;
+        }
+
+        // sensor eval
         let sensors = self.evaluate_sensors(map);
 
-        // Save flag before resetting
+        // load flag before resetting
         let turned_last_tick = self.turned_last_tick;
-
         self.reset_flags();
 
         let mut commands = Rule::compute_commands(rules, &sensors);
 
-        // Filter out turn commands if we turned last tick
+        // filter out turn commands if we turned last tick
         if turned_last_tick {
             commands.retain(|cmd| !matches!(cmd, Command::TurnLeft | Command::TurnRight));
             // If filtering left us empty, fall back to MoveForward
@@ -123,6 +130,11 @@ impl State {
 
     pub fn vac_dir(&self) -> Dir {
         self.vac_dir
+    }
+
+    /// for now, only checks if we're on an exit tile
+    fn evaluate_environment(&self, map: &Map) -> bool {
+        self.vac_pos == map.exit()
     }
 }
 
@@ -253,5 +265,25 @@ mod tests {
         // Third tick can turn again
         let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Rotated { .. }));
+    }
+
+    #[test]
+    fn test_exit_tile() {
+        // exit tile is at (2,2)
+        let map = Map::parse(Map::ROOM_4X4).unwrap();
+
+        // start to the left of the exit, facing right
+        let mut state = State::new((1, 2), Dir::East);
+
+        // no rules, should move forward onto the exit
+        let rules = [];
+
+        // First tick should move forward
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Moved { .. }));
+
+        // Second tick should exit
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Exited));
     }
 }

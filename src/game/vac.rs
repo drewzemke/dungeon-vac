@@ -143,6 +143,9 @@ fn move_vac(
 
                 transform.translation = map.to_game_world(state.vac_pos().as_vec2() + bump_offset);
             }
+            Effect::Exited => {
+                // TODO: emit exited event
+            }
         }
     }
 }
