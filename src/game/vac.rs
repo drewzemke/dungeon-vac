@@ -59,6 +59,7 @@ fn setup_vac(
     let initial_pos = map.to_game_world(state.vac_pos());
 
     // execute initial tick
+    // FIXME: listen for a "start" event and do this then
     let effect = state.tick(map, &rules);
     let vac = Vac::new(effect);
 

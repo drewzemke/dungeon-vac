@@ -70,6 +70,7 @@ const MAP_STR: &str = r"#######
 ";
 
 pub const WALL_COLOR: Color = Color::hsl(0., 0.0, 0.3);
+pub const EXIT_COLOR: Color = Color::hsl(55., 0.9, 0.6);
 
 pub fn setup_map(
     mut commands: Commands,
@@ -83,11 +84,13 @@ pub fn setup_map(
         .iter()
         .map(|wall| map.to_game_world(*wall))
         .collect::<Vec<_>>();
+    let exit_pos = map.to_game_world(map.exit());
 
-    // spawn map with wall tiles as children
+    // spawn map with tiles as children
     commands
         .spawn((map, Transform::default(), Visibility::default()))
         .with_children(|parent| {
+            // wall tiles
             for wall_pos in wall_positions {
                 let wall = meshes.add(Rectangle::new(GRID_SIZE, GRID_SIZE));
 
@@ -97,6 +100,15 @@ pub fn setup_map(
                     Transform::from_translation(wall_pos),
                 ));
             }
+
+            // exit tile
+            let exit = meshes.add(Circle::new(GRID_SIZE * 0.45));
+
+            parent.spawn((
+                Mesh2d(exit),
+                MeshMaterial2d(materials.add(EXIT_COLOR)),
+                Transform::from_translation(exit_pos),
+            ));
         });
 }
 
