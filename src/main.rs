@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 
 use dungeon_vac::{
-    core::{command::Command, level::Level, map::Map, rule::Rule, sensor::Sensor},
+    core::{command::Command, rule::Rule, sensor::Sensor},
     game::{
-        level::CurrentLevel, map::MapPlugin, messages::MessagesPlugin,
+        level::DefaultLevelsPlugin, map::MapPlugin, messages::MessagesPlugin,
         simulation::SimulationPlugin, vac::VacPlugin,
     },
     ui::{
@@ -19,23 +19,12 @@ const RULES: [Rule; 2] = [
     Rule::new(Sensor::HitWall, Command::TurnLeft),
 ];
 
-const MAP_STR: &str = r"#######
-#S..###
-#.#.###
-#.#...#
-#.#.#.#
-#.#E..#
-#.###.#
-#.....#
-#######
-";
-
 fn main() {
-    let first_level = Level::new(
-        Map::parse(MAP_STR).unwrap(),
-        Vec::from([Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight]),
-        Vec::from([Command::TurnRight, Command::TurnLeft]),
-    );
+    // let first_level = Level::new(
+    //     Map::parse(MAP_STR).unwrap(),
+    //     Vec::from([Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight]),
+    //     Vec::from([Command::TurnRight, Command::TurnLeft]),
+    // );
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -50,11 +39,8 @@ fn main() {
         .add_plugins(EguiPlugin::default())
         .add_plugins(CameraPlugin)
         .add_plugins(GridPlugin)
-        //
-        // HELP: do we need both of these?
-        .insert_resource(CurrentLevel::new(first_level))
+        .add_plugins(DefaultLevelsPlugin)
         .add_plugins(MapPlugin)
-        //
         .add_plugins(VacPlugin)
         .add_plugins(SimulationPlugin)
         .add_plugins(MessagesPlugin)

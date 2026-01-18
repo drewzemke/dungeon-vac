@@ -32,12 +32,14 @@ impl Simulation {
     }
 }
 
+// TODO: use run_if to schedule
 fn on_reset_level(mut sim: ResMut<Simulation>, mut reader: MessageReader<ResetLevel>) {
     if reader.read().count() > 0 {
         sim.reset();
     }
 }
 
+// TODO: use run_if to schedule
 fn on_level_complete(mut sim: ResMut<Simulation>, mut reader: MessageReader<LevelComplete>) {
     if reader.read().count() > 0 {
         sim.stop();

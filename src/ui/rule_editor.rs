@@ -4,7 +4,7 @@ use bevy_egui::{EguiContexts, egui};
 use crate::{
     core::rule::Rule,
     game::{
-        level::CurrentLevel,
+        level::LevelProgression,
         messages::{LevelComplete, ResetLevel},
         simulation::Simulation,
     },
@@ -28,9 +28,10 @@ pub fn rule_editor_ui(
     mut state: ResMut<UiState>,
     mut rules: ResMut<Rules>,
     mut sim: ResMut<Simulation>,
-    level: Res<CurrentLevel>,
+    levels: Res<LevelProgression>,
     mut writer: MessageWriter<ResetLevel>,
 ) {
+    let level = levels.current();
     let sensors = level.sensors();
     let commands = level.commands();
 

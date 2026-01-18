@@ -7,8 +7,8 @@ use crate::{
     },
     game::{
         constants::GRID_SIZE,
-        messages::{LevelComplete, ResetLevel},
         map::{Map, MapSetup},
+        messages::{LevelComplete, LoadLevel, ResetLevel},
         simulation::Simulation,
     },
     ui::rule_editor::Rules,
@@ -186,7 +186,10 @@ pub struct VacPlugin;
 
 impl Plugin for VacPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_vac.after(MapSetup))
-            .add_systems(Update, (move_vac, reset_vac));
+        app.add_systems(
+            Update,
+            setup_vac.after(MapSetup).run_if(on_message::<LoadLevel>),
+        )
+        .add_systems(Update, (move_vac, reset_vac));
     }
 }

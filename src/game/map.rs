@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{core::map::Map as CoreMap, game::constants::GRID_SIZE};
+use crate::{
+    core::map::Map as CoreMap,
+    game::{constants::GRID_SIZE, level::LevelProgression, messages::LoadLevel},
+};
 
 #[derive(Debug, Component)]
 pub struct Map {
@@ -58,26 +61,25 @@ impl ToGameWorld for Vec2 {
     }
 }
 
-const MAP_STR: &str = r"#######
-#S..###
-#.#.###
-#.#...#
-#.#.#.#
-#.#E..#
-#.###.#
-#.....#
-#######
-";
-
 pub const WALL_COLOR: Color = Color::hsl(0., 0.0, 0.3);
 pub const EXIT_COLOR: Color = Color::hsl(55., 0.9, 0.6);
 
+/// called when a new level has been selected
 pub fn setup_map(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    levels: Res<LevelProgression>,
+    current_map: Query<Entity, With<Map>>,
 ) {
-    let map = Map::new(CoreMap::parse(MAP_STR).unwrap());
+    // despawn the current map if there is one
+    if let Ok(current) = current_map.single() {
+        commands.entity(current).despawn();
+    }
+
+    let level = levels.current();
+    let map = level.map();
+    let map = Map::new(map.clone());
 
     let wall_positions = map
         .walls()
@@ -119,6 +121,9 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_map.in_set(MapSetup));
+        app.add_systems(
+            Update,
+            setup_map.in_set(MapSetup).run_if(on_message::<LoadLevel>),
+        );
     }
 }
