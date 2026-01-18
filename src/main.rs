@@ -4,8 +4,8 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use dungeon_vac::{
     core::{command::Command, level::Level, map::Map, rule::Rule, sensor::Sensor},
     game::{
-        events::EventsPlugin, level::CurrentLevel, map::MapPlugin, simulation::SimulationPlugin,
-        vac::VacPlugin,
+        level::CurrentLevel, map::MapPlugin, messages::MessagesPlugin,
+        simulation::SimulationPlugin, vac::VacPlugin,
     },
     ui::{
         camera::CameraPlugin,
@@ -57,7 +57,7 @@ fn main() {
         //
         .add_plugins(VacPlugin)
         .add_plugins(SimulationPlugin)
-        .add_plugins(EventsPlugin)
+        .add_plugins(MessagesPlugin)
         .insert_resource(Rules(Vec::from(RULES)))
         .init_resource::<UiState>()
         // FIXME: extract to UI plugin

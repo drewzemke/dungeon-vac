@@ -6,9 +6,9 @@ pub struct ResetLevel;
 #[derive(Message)]
 pub struct LevelComplete;
 
-pub struct EventsPlugin;
+pub struct MessagesPlugin;
 
-impl Plugin for EventsPlugin {
+impl Plugin for MessagesPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<LevelComplete>()
             .add_message::<ResetLevel>();

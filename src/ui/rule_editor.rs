@@ -4,8 +4,8 @@ use bevy_egui::{EguiContexts, egui};
 use crate::{
     core::rule::Rule,
     game::{
-        events::{LevelComplete, ResetLevel},
         level::CurrentLevel,
+        messages::{LevelComplete, ResetLevel},
         simulation::Simulation,
     },
 };

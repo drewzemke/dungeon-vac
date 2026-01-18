@@ -7,7 +7,7 @@ use crate::{
     },
     game::{
         constants::GRID_SIZE,
-        events::{LevelComplete, ResetLevel},
+        messages::{LevelComplete, ResetLevel},
         map::{Map, MapSetup},
         simulation::Simulation,
     },

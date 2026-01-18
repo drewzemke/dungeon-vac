@@ -1,5 +1,5 @@
 pub mod constants;
-pub mod events;
+pub mod messages;
 pub mod level;
 pub mod map;
 pub mod simulation;
