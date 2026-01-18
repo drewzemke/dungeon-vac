@@ -87,7 +87,7 @@ fn level_1_basics() -> Level {
     let map = Map::parse(
         r"
 ########
-#S....E#
+#S..T.E#
 ########
 ",
     )

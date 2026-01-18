@@ -4,18 +4,29 @@ use crate::core::{command::Command, dir::Dir, map::Map, rule::Rule, sensor::Sens
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
-    Moved { from: IVec2, to: IVec2 },
+    Moved {
+        from: IVec2,
+        to: IVec2,
+        collected_trash: bool,
+    },
     BumpedWall,
-    Rotated { from: Dir, to: Dir },
+    Rotated {
+        from: Dir,
+        to: Dir,
+    },
     Exited,
 }
 
+#[derive(Debug)]
 pub struct State {
     vac_pos: IVec2,
     vac_dir: Dir,
 
+    collected_trash_this_tick: bool,
     hit_wall_last_tick: bool,
     turned_last_tick: bool,
+
+    trash: Vec<IVec2>,
 
     is_finished: bool,
 }
@@ -26,28 +37,38 @@ impl State {
             vac_pos: vac_pos.into(),
             vac_dir,
 
+            collected_trash_this_tick: false,
             hit_wall_last_tick: false,
             turned_last_tick: false,
+
+            trash: Vec::new(),
 
             is_finished: false,
         }
     }
 
     pub fn tick(&mut self, map: &Map, rules: &[Rule]) -> Effect {
+        // reset the trash flag manually
+        self.collected_trash_this_tick = false;
+
         // environment check
         let exit = self.evaluate_environment(map);
         if exit {
-            self.is_finished = true;
-            return Effect::Exited;
+            // make sure all of the trash has been collected
+            if map.trash().iter().all(|pt| self.trash.contains(pt)) {
+                self.is_finished = true;
+                return Effect::Exited;
+            }
         }
 
         // sensor eval
         let sensors = self.evaluate_sensors(map);
 
-        // load flag before resetting
+        // reset flags
         let turned_last_tick = self.turned_last_tick;
         self.reset_flags();
 
+        // command computation based on rules
         let mut commands = Rule::compute_commands(rules, &sensors);
 
         // filter out turn commands if we turned last tick
@@ -82,6 +103,7 @@ impl State {
                     Effect::Moved {
                         from: orig_pos,
                         to: self.vac_pos,
+                        collected_trash: self.collected_trash_this_tick,
                     }
                 } else {
                     self.hit_wall_last_tick = true;
@@ -141,8 +163,14 @@ impl State {
         self.is_finished
     }
 
-    /// for now, only checks if we're on an exit tile
-    fn evaluate_environment(&self, map: &Map) -> bool {
+    /// returns true if we're on an exit tile
+    fn evaluate_environment(&mut self, map: &Map) -> bool {
+        // check if we can collect a trash here
+        if map.trash().contains(&self.vac_pos) {
+            self.collected_trash_this_tick = true;
+            self.trash.push(self.vac_pos);
+        }
+
         self.vac_pos == map.exit()
     }
 }
@@ -177,12 +205,8 @@ mod tests {
         let effect = state.apply_command(Command::MoveForward, &map);
         assert_eq!(state.vac_pos, (1, 0).into());
         assert_eq!(state.vac_dir, Dir::East);
-        assert_eq!(
-            effect,
-            Effect::Moved {
-                from: (0, 0).into(),
-                to: (1, 0).into()
-            }
+        assert!(
+            matches!( effect, Effect::Moved { from, to, .. } if from == (0, 0).into() && to == (1, 0).into() )
         );
 
         let effect = state.apply_command(Command::TurnRight, &map);
@@ -217,12 +241,8 @@ mod tests {
         let effect = state.apply_command(Command::MoveForward, &map);
         assert_eq!(state.vac_pos, (2, 1).into());
         assert!(!state.hit_wall_last_tick);
-        assert_eq!(
-            effect,
-            Effect::Moved {
-                from: (1, 1).into(),
-                to: (2, 1).into()
-            }
+        assert!(
+            matches!( effect, Effect::Moved { from, to, .. } if from == (1, 1).into() && to == (2, 1).into() )
         );
 
         // shouldn't be able to move forward again
@@ -256,44 +276,106 @@ mod tests {
     }
 
     #[test]
+    fn test_hit_wall() {
+        let map = Map::parse("S#").unwrap();
+        let mut state = State::new((0, 0), Dir::East);
+
+        // rule that reacts to a wall hit
+        let rules = [Rule::new(Sensor::HitWall, Command::TurnRight)];
+
+        // should hit the wall and then turn
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::BumpedWall));
+
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Rotated { .. }));
+    }
+
+    #[test]
     fn test_no_consecutive_turns() {
         let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
-        // Rule that always tries to turn
+        // rule that always tries to turn
         let rules = [Rule::new(Sensor::SpaceLeft, Command::TurnRight)];
 
-        // First tick should turn
+        // first tick should turn
         let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Rotated { .. }));
 
-        // Second tick should move forward (restriction enforced)
+        // second tick should move forward (restriction enforced)
         let effect = state.tick(&map, &rules);
         assert!(!matches!(effect, Effect::Rotated { .. }));
 
-        // Third tick can turn again
+        // third tick can turn again
         let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Rotated { .. }));
     }
 
     #[test]
     fn test_exit_tile() {
-        // exit tile is at (2,2)
-        let map = Map::parse(Map::ROOM_4X4).unwrap();
+        // start with exit right in front of us
+        let map = Map::parse("SE").unwrap();
 
         // start to the left of the exit, facing right
-        let mut state = State::new((1, 2), Dir::East);
+        let mut state = State::new((0, 0), Dir::East);
 
         // no rules, should move forward onto the exit
         let rules = [];
 
-        // First tick should move forward
+        // first tick should move forward
         let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Moved { .. }));
 
-        // Second tick should exit
+        // second tick should exit
         let effect = state.tick(&map, &rules);
         assert!(state.is_finished);
         assert!(matches!(effect, Effect::Exited));
+    }
+
+    #[test]
+    fn test_trash_collection() {
+        // start with trash right in front of us
+        let map = Map::parse("ST.").unwrap();
+        let mut state = State::new((0, 0), Dir::East);
+
+        // no rules, should move forward onto the trash
+        let rules = [];
+
+        // move forward
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Moved { .. }));
+
+        // move again -- should collect trash (since that's evaluated at the start)
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(
+            effect,
+            Effect::Moved {
+                collected_trash: true,
+                ..
+            }
+        ));
+        assert_eq!(state.trash, vec![(1, 0).into()]);
+        assert!(state.collected_trash_this_tick);
+    }
+
+    #[test]
+    fn test_exit_requires_trash_collection() {
+        // start with trash *behimd* us, exit in front
+        let map = Map::parse("TSE").unwrap();
+        let mut state = State::new((1, 0), Dir::East);
+
+        // no rules, should move forward onto the trash
+        let rules = [];
+
+        // first tick should move forward
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Moved { .. }));
+
+        // second tick should *not* exit, because we haven't collected
+        // all of the trash
+        let effect = state.tick(&map, &rules);
+        assert!(!state.is_finished);
+        assert!(!matches!(effect, Effect::Exited));
     }
 }

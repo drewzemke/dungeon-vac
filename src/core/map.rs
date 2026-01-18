@@ -3,6 +3,8 @@ use bevy::math::IVec2;
 #[derive(Debug, Clone)]
 pub struct Map {
     walls: Vec<IVec2>,
+    trash: Vec<IVec2>,
+
     start: IVec2,
     exit: IVec2,
 
@@ -14,8 +16,13 @@ impl Default for Map {
     fn default() -> Self {
         Self {
             walls: Vec::new(),
+            trash: Vec::new(),
+
             start: (0, 0).into(),
+
+            // FIXME: should be optional
             exit: (4, 4).into(),
+
             width: 5,
             height: 5,
         }
@@ -25,8 +32,9 @@ impl Default for Map {
 impl Map {
     pub fn parse(str: &str) -> Result<Self, String> {
         let mut walls = Vec::new();
+        let mut trash = Vec::new();
         let mut start = (0, 0).into();
-        let mut exit = (0, 0).into();
+        let mut exit = (1, 1).into();
 
         let str = str.trim();
 
@@ -35,16 +43,12 @@ impl Map {
 
         for (row_idx, row) in str.lines().enumerate() {
             for (col_idx, char) in row.chars().enumerate() {
+                let pt = (col_idx as i32, height as i32 - row_idx as i32 - 1).into();
                 match char {
-                    '#' => {
-                        walls.push((col_idx as i32, height as i32 - row_idx as i32 - 1).into());
-                    }
-                    'S' => {
-                        start = (col_idx as i32, height as i32 - row_idx as i32 - 1).into();
-                    }
-                    'E' => {
-                        exit = (col_idx as i32, height as i32 - row_idx as i32 - 1).into();
-                    }
+                    '#' => walls.push(pt),
+                    'T' => trash.push(pt),
+                    'S' => start = pt,
+                    'E' => exit = pt,
                     '.' => {}
                     c => {
                         return Err(format!("Unrecognized character in map string: '{c}'"));
@@ -55,6 +59,8 @@ impl Map {
 
         Ok(Self {
             walls,
+            trash,
+
             start,
             exit,
 
@@ -80,6 +86,10 @@ impl Map {
         &self.walls
     }
 
+    pub fn trash(&self) -> &[IVec2] {
+        &self.trash
+    }
+
     pub fn has_space(&self, pt: impl Into<IVec2>) -> bool {
         let pt: IVec2 = pt.into();
 
@@ -93,33 +103,20 @@ impl Map {
 
 #[cfg(test)]
 impl Map {
-    /// ...
-    /// .S.
-    /// ...
     pub const EMPTY_3X3: &str = r"
 ...
-.S.
+.ST
 ...";
 
-    /// #####
-    /// #..E#
-    /// #.#.#
-    /// #.#.#
-    /// #.S.#
-    /// #####
     pub const BIG_LOOP_5X6: &str = r"
 #####
 #..E#
-#.#.#
-#.#.#
+#T#.#
+#.#T#
 #.S.#
 #####
 ";
 
-    /// ####
-    /// #.E#
-    /// #S.#
-    /// ####
     pub const ROOM_4X4: &str = r"
 ####
 #.E#
@@ -138,6 +135,9 @@ mod tests {
         assert_eq!(map.dimensions(), (5, 6));
         assert_eq!(map.start(), (2, 1).into());
         assert_eq!(map.exit(), (3, 4).into());
+
+        assert!(map.trash().contains(&(1, 3).into()));
+        assert!(map.trash().contains(&(3, 2).into()));
     }
 
     #[test]

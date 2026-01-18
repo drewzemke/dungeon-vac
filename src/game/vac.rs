@@ -12,7 +12,7 @@ use crate::{
         solution::Solution,
         state::State as GameState,
     },
-    messages::{LevelComplete, LoadLevel},
+    messages::{LevelComplete, LoadLevel, TrashCollected},
 };
 
 const STEP_TIME_MS: u64 = 500;
@@ -99,7 +99,8 @@ fn move_vac(
     solution: Res<Solution>,
     time: Res<Time>,
     sim: Res<Simulation>,
-    mut writer: MessageWriter<LevelComplete>,
+    mut level_complete: MessageWriter<LevelComplete>,
+    mut trash_collected: MessageWriter<TrashCollected>,
 ) {
     if !sim.is_running() {
         return;
@@ -119,11 +120,21 @@ fn move_vac(
         // update state and store in movement state
         let effect = state.tick(map, solution.rules());
         vac.effect = effect;
+
+        // fire an event if we just collected trash
+        if let Effect::Moved {
+            from,
+            collected_trash: true,
+            ..
+        } = effect
+        {
+            trash_collected.write(TrashCollected(from));
+        }
     } else {
         let elapsed = timer.elapsed().as_millis() as f32 / STEP_TIME_MS as f32;
 
         match vac.effect {
-            Effect::Moved { from, to } => {
+            Effect::Moved { from, to, .. } => {
                 let pos = Vec2::lerp(from.as_vec2(), to.as_vec2(), elapsed);
                 transform.translation = map.to_game_world(pos);
             }
@@ -155,7 +166,7 @@ fn move_vac(
                 transform.translation = map.to_game_world(state.vac_pos().as_vec2() + bump_offset);
             }
             Effect::Exited => {
-                writer.write(LevelComplete);
+                level_complete.write(LevelComplete);
             }
         }
     }

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     core::map::Map as CoreMap,
     game::{constants::GRID_SIZE, level::LevelProgression},
-    messages::LoadLevel,
+    messages::{LoadLevel, TrashCollected},
 };
 
 #[derive(Debug, Component)]
@@ -63,7 +63,13 @@ impl ToGameWorld for Vec2 {
 }
 
 pub const WALL_COLOR: Color = Color::hsl(0., 0.0, 0.3);
+pub const TRASH_COLOR: Color = Color::hsl(90., 0.1, 0.7);
 pub const EXIT_COLOR: Color = Color::hsl(55., 0.9, 0.6);
+
+// TODO: move this to a separate module?
+/// marker component to make it easier to despawn trash
+#[derive(Component)]
+pub struct Trash(IVec2);
 
 /// called when a new level has been selected
 pub fn setup_map(
@@ -87,6 +93,13 @@ pub fn setup_map(
         .iter()
         .map(|wall| map.to_game_world(*wall))
         .collect::<Vec<_>>();
+
+    let trash_positions = map
+        .trash()
+        .iter()
+        .map(|trash| (*trash, map.to_game_world(*trash)))
+        .collect::<Vec<_>>();
+
     let exit_pos = map.to_game_world(map.exit());
 
     // spawn map with tiles as children
@@ -104,6 +117,18 @@ pub fn setup_map(
                 ));
             }
 
+            // trash tiles
+            for (trash_pos2, trash_pos3) in trash_positions {
+                let trash = meshes.add(Rectangle::new(GRID_SIZE * 0.8, GRID_SIZE * 0.8));
+
+                parent.spawn((
+                    Trash(trash_pos2),
+                    Mesh2d(trash),
+                    MeshMaterial2d(materials.add(TRASH_COLOR)),
+                    Transform::from_translation(trash_pos3),
+                ));
+            }
+
             // exit tile
             let exit = meshes.add(Circle::new(GRID_SIZE * 0.45));
 
@@ -115,6 +140,20 @@ pub fn setup_map(
         });
 }
 
+fn despawn_trash(
+    mut commands: Commands,
+    trash: Query<(Entity, &Trash)>,
+    mut reader: MessageReader<TrashCollected>,
+) {
+    for TrashCollected(pt) in reader.read() {
+        // find the corresponding entity and despawn it
+        let trash = trash.iter().find(|(_, Trash(pt2))| *pt == *pt2);
+        if let Some((entity, _)) = trash {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MapSetup;
 
@@ -124,7 +163,10 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            setup_map.in_set(MapSetup).run_if(on_message::<LoadLevel>),
+            (
+                setup_map.in_set(MapSetup).run_if(on_message::<LoadLevel>),
+                despawn_trash.run_if(on_message::<TrashCollected>),
+            ),
         );
     }
 }
