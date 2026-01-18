@@ -9,6 +9,7 @@ use crate::{
         constants::GRID_SIZE,
         map::{Map, MapSetup},
         simulation::Simulation,
+        state::State as GameState,
     },
     messages::{LevelComplete, LoadLevel},
     ui::rule_editor::Rules,
@@ -31,9 +32,6 @@ impl Vac {
 
 #[derive(Component, Deref, DerefMut)]
 struct VacMovementTimer(Timer);
-
-#[derive(Component, Deref, DerefMut)]
-struct State(CoreState);
 
 impl VacMovementTimer {
     fn new() -> Self {
@@ -76,7 +74,7 @@ fn setup_vac(
         Transform::from_translation(initial_pos),
         vac,
         VacMovementTimer::new(),
-        State(state),
+        GameState(state),
         // triangle
         children![(
             Mesh2d(meshes.add(Triangle2d::new(
@@ -91,7 +89,12 @@ fn setup_vac(
 }
 
 fn move_vac(
-    mut query: Query<(&mut Transform, &mut Vac, &mut VacMovementTimer, &mut State)>,
+    mut query: Query<(
+        &mut Transform,
+        &mut Vac,
+        &mut VacMovementTimer,
+        &mut GameState,
+    )>,
     map: Query<&Map>,
     rules: ResMut<Rules>,
     time: Res<Time>,

@@ -16,6 +16,8 @@ pub struct State {
 
     hit_wall_last_tick: bool,
     turned_last_tick: bool,
+
+    is_finished: bool,
 }
 
 impl State {
@@ -26,6 +28,8 @@ impl State {
 
             hit_wall_last_tick: false,
             turned_last_tick: false,
+
+            is_finished: false,
         }
     }
 
@@ -33,6 +37,7 @@ impl State {
         // environment check
         let exit = self.evaluate_environment(map);
         if exit {
+            self.is_finished = true;
             return Effect::Exited;
         }
 
@@ -130,6 +135,10 @@ impl State {
 
     pub fn vac_dir(&self) -> Dir {
         self.vac_dir
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.is_finished
     }
 
     /// for now, only checks if we're on an exit tile
@@ -284,6 +293,7 @@ mod tests {
 
         // Second tick should exit
         let effect = state.tick(&map, &rules);
+        assert!(state.is_finished);
         assert!(matches!(effect, Effect::Exited));
     }
 }

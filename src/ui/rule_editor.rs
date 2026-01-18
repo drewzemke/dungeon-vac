@@ -3,8 +3,8 @@ use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
 use crate::{
     core::rule::Rule,
-    game::{level::LevelProgression, simulation::Simulation},
-    messages::{LevelComplete, NextLevel, ResetLevel},
+    game::{level::LevelProgression, simulation::Simulation, state::State as GameState},
+    messages::{NextLevel, ResetLevel},
 };
 
 /// UI state for rule creation
@@ -12,9 +12,6 @@ use crate::{
 struct UiState {
     selected_sensor: Option<usize>,
     selected_command: Option<usize>,
-
-    // FIXME: this should be part of simulator state
-    level_complete: bool,
 }
 
 // FIXME: this isn't the right place for this
@@ -22,14 +19,17 @@ struct UiState {
 #[derive(Default, Resource, Deref, DerefMut)]
 pub struct Rules(pub Vec<Rule>);
 
+// FIXME: too many args
+#[expect(clippy::too_many_arguments)]
 fn rule_editor_ui(
     mut contexts: EguiContexts,
-    mut state: ResMut<UiState>,
+    mut ui_state: ResMut<UiState>,
     mut rules: ResMut<Rules>,
     mut sim: ResMut<Simulation>,
     levels: Res<LevelProgression>,
     mut reset: MessageWriter<ResetLevel>,
     mut next_level: MessageWriter<NextLevel>,
+    game_state: Query<&GameState>,
 ) {
     let level = levels.current();
     let sensors = level.sensors();
@@ -39,9 +39,11 @@ fn rule_editor_ui(
         return;
     };
 
+    let state = game_state.single().unwrap();
+
     let running = sim.is_running();
     let can_edit = !sim.has_started();
-    let level_complete = state.level_complete;
+    let level_complete = state.is_finished();
 
     egui::SidePanel::left("rule_editor")
         .resizable(false)
@@ -72,8 +74,8 @@ fn rule_editor_ui(
             ui.label("Create Rule:");
             ui.add_space(8.0);
 
-            let selected_sensor = state.selected_sensor.and_then(|idx| sensors.get(idx));
-            let selected_command = state.selected_command.and_then(|idx| commands.get(idx));
+            let selected_sensor = ui_state.selected_sensor.and_then(|idx| sensors.get(idx));
+            let selected_command = ui_state.selected_command.and_then(|idx| commands.get(idx));
 
             ui.add_enabled_ui(can_edit, |ui| {
                 let selected_sensor_str = selected_sensor
@@ -83,7 +85,7 @@ fn rule_editor_ui(
                     .selected_text(selected_sensor_str)
                     .show_ui(ui, |ui| {
                         for (i, sensor) in sensors.iter().enumerate() {
-                            ui.selectable_value(&mut state.selected_sensor, Some(i), *sensor);
+                            ui.selectable_value(&mut ui_state.selected_sensor, Some(i), *sensor);
                         }
                     });
 
@@ -94,7 +96,7 @@ fn rule_editor_ui(
                     .selected_text(selected_command_str)
                     .show_ui(ui, |ui| {
                         for (i, command) in commands.iter().enumerate() {
-                            ui.selectable_value(&mut state.selected_command, Some(i), *command);
+                            ui.selectable_value(&mut ui_state.selected_command, Some(i), *command);
                         }
                     });
 
@@ -107,8 +109,8 @@ fn rule_editor_ui(
                             && let Some(command) = selected_command
                         {
                             rules.push(Rule::new(*sensor, *command));
-                            state.selected_sensor = None;
-                            state.selected_command = None;
+                            ui_state.selected_sensor = None;
+                            ui_state.selected_command = None;
                         }
                     },
                 );
@@ -139,17 +141,10 @@ fn rule_editor_ui(
                 ui.separator();
                 ui.label("Level Complete!");
                 if ui.button("Next Level").clicked() {
-                    state.level_complete = false;
                     next_level.write(NextLevel);
                 }
             }
         });
-}
-
-fn on_level_complete(mut reader: MessageReader<LevelComplete>, mut state: ResMut<UiState>) {
-    for _ in reader.read() {
-        state.level_complete = true;
-    }
 }
 
 pub struct RuleEditorPlugin;
@@ -157,7 +152,6 @@ pub struct RuleEditorPlugin;
 impl Plugin for RuleEditorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<UiState>()
-            .add_systems(EguiPrimaryContextPass, rule_editor_ui)
-            .add_systems(Update, on_level_complete);
+            .add_systems(EguiPrimaryContextPass, rule_editor_ui);
     }
 }
