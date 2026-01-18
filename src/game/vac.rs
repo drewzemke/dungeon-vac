@@ -8,7 +8,7 @@ use crate::{
     game::{
         constants::GRID_SIZE,
         map::{Map, MapSetup},
-        messages::{LevelComplete, LoadLevel, ResetLevel},
+        messages::{LevelComplete, LoadLevel},
         simulation::Simulation,
     },
     ui::rule_editor::Rules,
@@ -51,7 +51,13 @@ fn setup_vac(
     mut materials: ResMut<Assets<ColorMaterial>>,
     rules: Res<Rules>,
     map: Query<&Map>,
+    vac: Query<Entity, With<Vac>>,
 ) {
+    // despawn the current vac if there is one
+    if let Ok(vac) = vac.single() {
+        commands.entity(vac).despawn();
+    }
+
     let map = map.single().unwrap();
     let mut state = CoreState::new(map.start(), Dir::East);
 
@@ -152,36 +158,6 @@ fn move_vac(
     }
 }
 
-// TODO: there's some lines between this and `setup_vac` -- is there a nice way to combine?
-fn reset_vac(
-    mut query: Query<(&mut Transform, &mut Vac, &mut VacMovementTimer, &mut State)>,
-    mut reader: MessageReader<ResetLevel>,
-    map: Query<&Map>,
-    rules: Res<Rules>,
-) {
-    if reader.read().count() == 0 {
-        return;
-    }
-
-    let map = map.single().unwrap();
-    let mut new_state = CoreState::new(map.start(), Dir::East);
-
-    // compute starting map location
-    let initial_pos = map.to_game_world(new_state.vac_pos());
-
-    // execute initial tick
-    let effect = new_state.tick(map, &rules);
-    let new_vac = Vac::new(effect);
-
-    let (mut transform, mut vac, mut timer, mut state) = query.single_mut().unwrap();
-
-    // update stuff
-    *transform = Transform::from_translation(initial_pos);
-    *vac = new_vac;
-    timer.reset();
-    *state = State(new_state);
-}
-
 pub struct VacPlugin;
 
 impl Plugin for VacPlugin {
@@ -190,6 +166,6 @@ impl Plugin for VacPlugin {
             Update,
             setup_vac.after(MapSetup).run_if(on_message::<LoadLevel>),
         )
-        .add_systems(Update, (move_vac, reset_vac));
+        .add_systems(Update, move_vac);
     }
 }

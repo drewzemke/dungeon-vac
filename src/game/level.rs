@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use crate::{
     core::{level::Level, map::Map},
-    game::{map::MapSetup, messages::LoadLevel},
+    game::{
+        map::MapSetup,
+        messages::{LoadLevel, ResetLevel},
+    },
 };
 
 #[derive(Resource)]
@@ -39,6 +42,10 @@ fn load_level(mut reader: MessageReader<LoadLevel>, mut levels: ResMut<LevelProg
     }
 }
 
+fn on_reset_level(mut writer: MessageWriter<LoadLevel>, levels: Res<LevelProgression>) {
+    writer.write(LoadLevel(levels.current_idx));
+}
+
 pub struct DefaultLevelsPlugin;
 
 impl Plugin for DefaultLevelsPlugin {
@@ -47,7 +54,10 @@ impl Plugin for DefaultLevelsPlugin {
             .add_systems(Startup, init_level)
             .add_systems(
                 Update,
-                load_level.before(MapSetup).run_if(on_message::<LoadLevel>),
+                (
+                    load_level.before(MapSetup).run_if(on_message::<LoadLevel>),
+                    on_reset_level.run_if(on_message::<ResetLevel>),
+                ),
             );
     }
 }
