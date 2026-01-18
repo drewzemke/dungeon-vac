@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, egui};
+use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
 use crate::{
     core::rule::Rule,
@@ -9,7 +9,7 @@ use crate::{
 
 /// UI state for rule creation
 #[derive(Default, Resource)]
-pub struct UiState {
+struct UiState {
     selected_sensor: Option<usize>,
     selected_command: Option<usize>,
 
@@ -18,10 +18,11 @@ pub struct UiState {
 }
 
 // FIXME: this isn't the right place for this
+// extract to a `solution` resource?
 #[derive(Default, Resource, Deref, DerefMut)]
 pub struct Rules(pub Vec<Rule>);
 
-pub fn rule_editor_ui(
+fn rule_editor_ui(
     mut contexts: EguiContexts,
     mut state: ResMut<UiState>,
     mut rules: ResMut<Rules>,
@@ -145,8 +146,18 @@ pub fn rule_editor_ui(
         });
 }
 
-pub fn on_level_complete(mut reader: MessageReader<LevelComplete>, mut state: ResMut<UiState>) {
+fn on_level_complete(mut reader: MessageReader<LevelComplete>, mut state: ResMut<UiState>) {
     for _ in reader.read() {
         state.level_complete = true;
+    }
+}
+
+pub struct RuleEditorPlugin;
+
+impl Plugin for RuleEditorPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<UiState>()
+            .add_systems(EguiPrimaryContextPass, rule_editor_ui)
+            .add_systems(Update, on_level_complete);
     }
 }

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use bevy_egui::EguiPlugin;
 
 use dungeon_vac::{
     game::{
@@ -9,7 +9,7 @@ use dungeon_vac::{
     ui::{
         camera::CameraPlugin,
         grid::GridPlugin,
-        rule_editor::{Rules, UiState, on_level_complete, rule_editor_ui},
+        rule_editor::{RuleEditorPlugin, Rules},
     },
 };
 
@@ -32,11 +32,7 @@ fn main() {
         .add_plugins(VacPlugin)
         .add_plugins(SimulationPlugin)
         .add_plugins(MessagesPlugin)
+        .add_plugins(RuleEditorPlugin)
         .insert_resource(Rules(Vec::new()))
-        .init_resource::<UiState>()
-        // FIXME: extract to UI plugin
-        .add_systems(EguiPrimaryContextPass, rule_editor_ui)
-        .add_systems(Update, on_level_complete)
-        //
         .run();
 }
