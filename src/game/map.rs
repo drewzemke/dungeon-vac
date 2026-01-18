@@ -2,7 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     core::map::Map as CoreMap,
-    game::{constants::GRID_SIZE, level::LevelProgression, messages::LoadLevel},
+    game::{constants::GRID_SIZE, level::LevelProgression},
+    messages::LoadLevel,
 };
 
 #[derive(Debug, Component)]

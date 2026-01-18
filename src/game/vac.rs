@@ -8,9 +8,9 @@ use crate::{
     game::{
         constants::GRID_SIZE,
         map::{Map, MapSetup},
-        messages::{LevelComplete, LoadLevel},
         simulation::Simulation,
     },
+    messages::{LevelComplete, LoadLevel},
     ui::rule_editor::Rules,
 };
 

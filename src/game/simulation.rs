@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game::messages::{LevelComplete, ResetLevel};
+use crate::messages::{LevelComplete, ResetLevel};
 
 #[derive(Default, Resource)]
 pub struct Simulation {

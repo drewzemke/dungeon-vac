@@ -1,13 +1,10 @@
 use bevy::prelude::*;
 
-#[derive(Message)]
-pub struct ResetLevel;
+mod system;
+mod user;
 
-#[derive(Message)]
-pub struct LevelComplete;
-
-#[derive(Message)]
-pub struct LoadLevel(pub usize);
+pub use system::*;
+pub use user::*;
 
 pub struct MessagesPlugin;
 

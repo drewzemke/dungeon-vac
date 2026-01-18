@@ -4,9 +4,9 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use dungeon_vac::{
     core::{command::Command, rule::Rule, sensor::Sensor},
     game::{
-        level::DefaultLevelsPlugin, map::MapPlugin, messages::MessagesPlugin,
-        simulation::SimulationPlugin, vac::VacPlugin,
+        level::DefaultLevelsPlugin, map::MapPlugin, simulation::SimulationPlugin, vac::VacPlugin,
     },
+    messages::MessagesPlugin,
     ui::{
         camera::CameraPlugin,
         grid::GridPlugin,
@@ -20,12 +20,6 @@ const RULES: [Rule; 2] = [
 ];
 
 fn main() {
-    // let first_level = Level::new(
-    //     Map::parse(MAP_STR).unwrap(),
-    //     Vec::from([Sensor::HitWall, Sensor::SpaceLeft, Sensor::SpaceRight]),
-    //     Vec::from([Command::TurnRight, Command::TurnLeft]),
-    // );
-
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

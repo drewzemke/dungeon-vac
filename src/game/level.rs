@@ -2,10 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     core::{level::Level, map::Map},
-    game::{
-        map::MapSetup,
-        messages::{LoadLevel, ResetLevel},
-    },
+    game::map::MapSetup,
+    messages::{LoadLevel, ResetLevel},
 };
 
 #[derive(Resource)]

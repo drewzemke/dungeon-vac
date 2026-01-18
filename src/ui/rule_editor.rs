@@ -3,11 +3,8 @@ use bevy_egui::{EguiContexts, egui};
 
 use crate::{
     core::rule::Rule,
-    game::{
-        level::LevelProgression,
-        messages::{LevelComplete, ResetLevel},
-        simulation::Simulation,
-    },
+    game::{level::LevelProgression, simulation::Simulation},
+    messages::{LevelComplete, ResetLevel},
 };
 
 /// UI state for rule creation
