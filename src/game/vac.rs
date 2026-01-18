@@ -9,10 +9,10 @@ use crate::{
         constants::GRID_SIZE,
         map::{Map, MapSetup},
         simulation::Simulation,
+        solution::Solution,
         state::State as GameState,
     },
     messages::{LevelComplete, LoadLevel},
-    ui::rule_editor::Rules,
 };
 
 const STEP_TIME_MS: u64 = 500;
@@ -47,7 +47,7 @@ fn setup_vac(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    rules: Res<Rules>,
+    solution: Res<Solution>,
     map: Query<&Map>,
     vac: Query<Entity, With<Vac>>,
 ) {
@@ -64,7 +64,7 @@ fn setup_vac(
 
     // execute initial tick
     // FIXME: listen for a "start" event and do this then
-    let effect = state.tick(map, &rules);
+    let effect = state.tick(map, solution.rules());
     let vac = Vac::new(effect);
 
     // spawn a circle with a triangle to show heading
@@ -96,7 +96,7 @@ fn move_vac(
         &mut GameState,
     )>,
     map: Query<&Map>,
-    rules: ResMut<Rules>,
+    solution: Res<Solution>,
     time: Res<Time>,
     sim: Res<Simulation>,
     mut writer: MessageWriter<LevelComplete>,
@@ -117,7 +117,7 @@ fn move_vac(
         transform.translation = map.to_game_world(state.vac_pos());
 
         // update state and store in movement state
-        let effect = state.tick(map, &rules);
+        let effect = state.tick(map, solution.rules());
         vac.effect = effect;
     } else {
         let elapsed = timer.elapsed().as_millis() as f32 / STEP_TIME_MS as f32;

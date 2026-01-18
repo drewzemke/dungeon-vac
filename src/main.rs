@@ -3,14 +3,11 @@ use bevy_egui::EguiPlugin;
 
 use dungeon_vac::{
     game::{
-        level::DefaultLevelsPlugin, map::MapPlugin, simulation::SimulationPlugin, vac::VacPlugin,
+        level::DefaultLevelsPlugin, map::MapPlugin, simulation::SimulationPlugin,
+        solution::SolutionPlugin, vac::VacPlugin,
     },
     messages::MessagesPlugin,
-    ui::{
-        camera::CameraPlugin,
-        grid::GridPlugin,
-        rule_editor::{RuleEditorPlugin, Rules},
-    },
+    ui::{camera::CameraPlugin, grid::GridPlugin, rule_editor::RuleEditorPlugin},
 };
 
 fn main() {
@@ -33,6 +30,6 @@ fn main() {
         .add_plugins(SimulationPlugin)
         .add_plugins(MessagesPlugin)
         .add_plugins(RuleEditorPlugin)
-        .insert_resource(Rules(Vec::new()))
+        .add_plugins(SolutionPlugin)
         .run();
 }

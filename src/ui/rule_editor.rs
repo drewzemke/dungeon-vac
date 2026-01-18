@@ -3,7 +3,10 @@ use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 
 use crate::{
     core::rule::Rule,
-    game::{level::LevelProgression, simulation::Simulation, state::State as GameState},
+    game::{
+        level::LevelProgression, simulation::Simulation, solution::Solution,
+        state::State as GameState,
+    },
     messages::{NextLevel, ResetLevel},
 };
 
@@ -14,17 +17,12 @@ struct UiState {
     selected_command: Option<usize>,
 }
 
-// FIXME: this isn't the right place for this
-// extract to a `solution` resource?
-#[derive(Default, Resource, Deref, DerefMut)]
-pub struct Rules(pub Vec<Rule>);
-
 // FIXME: too many args
 #[expect(clippy::too_many_arguments)]
 fn rule_editor_ui(
     mut contexts: EguiContexts,
     mut ui_state: ResMut<UiState>,
-    mut rules: ResMut<Rules>,
+    mut solution: ResMut<Solution>,
     mut sim: ResMut<Simulation>,
     levels: Res<LevelProgression>,
     mut reset: MessageWriter<ResetLevel>,
@@ -108,7 +106,7 @@ fn rule_editor_ui(
                             && let Some(sensor) = selected_sensor
                             && let Some(command) = selected_command
                         {
-                            rules.push(Rule::new(*sensor, *command));
+                            solution.add_rule(Rule::new(*sensor, *command));
                             ui_state.selected_sensor = None;
                             ui_state.selected_command = None;
                         }
@@ -122,7 +120,7 @@ fn rule_editor_ui(
             ui.add_space(8.0);
 
             let mut remove_idx = None;
-            for (idx, rule) in rules.0.iter().enumerate() {
+            for (idx, rule) in solution.rules().iter().enumerate() {
                 ui.horizontal(|ui| {
                     ui.label(format!("{} {}", rule.sensor(), rule.command()));
                     ui.add_enabled_ui(can_edit, |ui| {
@@ -134,7 +132,7 @@ fn rule_editor_ui(
             }
 
             if let Some(idx) = remove_idx {
-                rules.remove(idx);
+                solution.remove_rule(idx);
             }
 
             if level_complete {
