@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::game::events::ResetLevel;
+use crate::game::events::{LevelComplete, ResetLevel};
 
 #[derive(Default, Resource)]
 pub struct Simulation {
@@ -32,9 +32,15 @@ impl Simulation {
     }
 }
 
-fn reset_sim(mut sim: ResMut<Simulation>, mut reader: MessageReader<ResetLevel>) {
+fn on_reset_level(mut sim: ResMut<Simulation>, mut reader: MessageReader<ResetLevel>) {
     if reader.read().count() > 0 {
         sim.reset();
+    }
+}
+
+fn on_level_complete(mut sim: ResMut<Simulation>, mut reader: MessageReader<LevelComplete>) {
+    if reader.read().count() > 0 {
+        sim.stop();
     }
 }
 
@@ -43,8 +49,6 @@ pub struct SimulationPlugin;
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Simulation::default())
-            .add_systems(Update, reset_sim);
+            .add_systems(Update, (on_reset_level, on_level_complete));
     }
 }
-
-// TODO: stop simulation on level complete event
