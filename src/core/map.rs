@@ -28,6 +28,8 @@ impl Map {
         let mut start = (0, 0).into();
         let mut exit = (0, 0).into();
 
+        let str = str.trim();
+
         let width = str.lines().next().ok_or("String is empty.")?.len();
         let height = str.lines().count();
 
@@ -94,7 +96,8 @@ impl Map {
     /// ...
     /// .S.
     /// ...
-    pub const EMPTY_3X3: &str = r"...
+    pub const EMPTY_3X3: &str = r"
+...
 .S.
 ...";
 
@@ -104,7 +107,8 @@ impl Map {
     /// #.#.#
     /// #.S.#
     /// #####
-    pub const BIG_LOOP_5X6: &str = r"#####
+    pub const BIG_LOOP_5X6: &str = r"
+#####
 #..E#
 #.#.#
 #.#.#
@@ -116,7 +120,8 @@ impl Map {
     /// #.E#
     /// #S.#
     /// ####
-    pub const ROOM_4X4: &str = r"####
+    pub const ROOM_4X4: &str = r"
+####
 #.E#
 #S.#
 ####";
