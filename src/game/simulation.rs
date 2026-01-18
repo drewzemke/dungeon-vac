@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::messages::{LevelComplete, ResetLevel};
+use crate::messages::{LevelComplete, NextLevel, ResetLevel};
 
 #[derive(Default, Resource)]
 pub struct Simulation {
@@ -32,25 +32,29 @@ impl Simulation {
     }
 }
 
-// TODO: use run_if to schedule
-fn on_reset_level(mut sim: ResMut<Simulation>, mut reader: MessageReader<ResetLevel>) {
-    if reader.read().count() > 0 {
-        sim.reset();
-    }
+fn on_reset_level(mut sim: ResMut<Simulation>) {
+    sim.reset();
 }
 
-// TODO: use run_if to schedule
-fn on_level_complete(mut sim: ResMut<Simulation>, mut reader: MessageReader<LevelComplete>) {
-    if reader.read().count() > 0 {
-        sim.stop();
-    }
+fn on_next_level(mut sim: ResMut<Simulation>) {
+    sim.reset();
+}
+
+fn on_level_complete(mut sim: ResMut<Simulation>) {
+    sim.stop();
 }
 
 pub struct SimulationPlugin;
 
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Simulation::default())
-            .add_systems(Update, (on_reset_level, on_level_complete));
+        app.insert_resource(Simulation::default()).add_systems(
+            Update,
+            (
+                on_level_complete.run_if(on_message::<LevelComplete>),
+                on_next_level.run_if(on_message::<NextLevel>),
+                on_reset_level.run_if(on_message::<ResetLevel>),
+            ),
+        );
     }
 }

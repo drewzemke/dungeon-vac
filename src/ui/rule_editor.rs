@@ -4,7 +4,7 @@ use bevy_egui::{EguiContexts, egui};
 use crate::{
     core::rule::Rule,
     game::{level::LevelProgression, simulation::Simulation},
-    messages::{LevelComplete, ResetLevel},
+    messages::{LevelComplete, NextLevel, ResetLevel},
 };
 
 /// UI state for rule creation
@@ -13,6 +13,7 @@ pub struct UiState {
     selected_sensor: usize,
     selected_command: usize,
 
+    // FIXME: this should be part of simulator state
     level_complete: bool,
 }
 
@@ -26,7 +27,8 @@ pub fn rule_editor_ui(
     mut rules: ResMut<Rules>,
     mut sim: ResMut<Simulation>,
     levels: Res<LevelProgression>,
-    mut writer: MessageWriter<ResetLevel>,
+    mut reset: MessageWriter<ResetLevel>,
+    mut next_level: MessageWriter<NextLevel>,
 ) {
     let level = levels.current();
     let sensors = level.sensors();
@@ -38,6 +40,7 @@ pub fn rule_editor_ui(
 
     let running = sim.is_running();
     let can_edit = !sim.has_started();
+    let level_complete = state.level_complete;
 
     egui::SidePanel::left("rule_editor")
         .resizable(false)
@@ -59,7 +62,7 @@ pub fn rule_editor_ui(
                 });
 
                 if ui.button("Reset").clicked() {
-                    writer.write(ResetLevel);
+                    reset.write(ResetLevel);
                 }
             });
 
@@ -95,9 +98,12 @@ pub fn rule_editor_ui(
 
                 ui.add_space(8.0);
                 if ui.button("Add Rule").clicked() {
-                    let sensor = sensors[state.selected_sensor];
-                    let command = commands[state.selected_command];
-                    rules.push(Rule::new(sensor, command));
+                    // FIXME: disable the button if sensor+comman is not selected
+                    if let Some(sensor) = sensors.get(state.selected_sensor)
+                        && let Some(command) = commands.get(state.selected_command)
+                    {
+                        rules.push(Rule::new(*sensor, *command));
+                    }
                 }
             });
 
@@ -122,9 +128,13 @@ pub fn rule_editor_ui(
                 rules.remove(idx);
             }
 
-            if state.level_complete {
+            if level_complete {
                 ui.separator();
                 ui.label("Level Complete!");
+                if ui.button("Next Level").clicked() {
+                    state.level_complete = false;
+                    next_level.write(NextLevel);
+                }
             }
         });
 }
