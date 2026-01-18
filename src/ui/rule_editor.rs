@@ -10,8 +10,8 @@ use crate::{
 /// UI state for rule creation
 #[derive(Default, Resource)]
 pub struct UiState {
-    selected_sensor: usize,
-    selected_command: usize,
+    selected_sensor: Option<usize>,
+    selected_command: Option<usize>,
 
     // FIXME: this should be part of simulator state
     level_complete: bool,
@@ -71,40 +71,46 @@ pub fn rule_editor_ui(
             ui.label("Create Rule:");
             ui.add_space(8.0);
 
+            let selected_sensor = state.selected_sensor.and_then(|idx| sensors.get(idx));
+            let selected_command = state.selected_command.and_then(|idx| commands.get(idx));
+
             ui.add_enabled_ui(can_edit, |ui| {
-                let selected_sensor = sensors
-                    .get(state.selected_sensor)
+                let selected_sensor_str = selected_sensor
                     .map(|s| s.to_string())
                     .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Sensor")
-                    .selected_text(selected_sensor)
+                    .selected_text(selected_sensor_str)
                     .show_ui(ui, |ui| {
                         for (i, sensor) in sensors.iter().enumerate() {
-                            ui.selectable_value(&mut state.selected_sensor, i, *sensor);
+                            ui.selectable_value(&mut state.selected_sensor, Some(i), *sensor);
                         }
                     });
 
-                let selected_command = commands
-                    .get(state.selected_command)
-                    .map(|c| c.to_string())
+                let selected_command_str = selected_command
+                    .map(|s| s.to_string())
                     .unwrap_or("Select".into());
                 egui::ComboBox::from_label("Command")
-                    .selected_text(selected_command)
+                    .selected_text(selected_command_str)
                     .show_ui(ui, |ui| {
                         for (i, command) in commands.iter().enumerate() {
-                            ui.selectable_value(&mut state.selected_command, i, *command);
+                            ui.selectable_value(&mut state.selected_command, Some(i), *command);
                         }
                     });
 
                 ui.add_space(8.0);
-                if ui.button("Add Rule").clicked() {
-                    // FIXME: disable the button if sensor+comman is not selected
-                    if let Some(sensor) = sensors.get(state.selected_sensor)
-                        && let Some(command) = commands.get(state.selected_command)
-                    {
-                        rules.push(Rule::new(*sensor, *command));
-                    }
-                }
+                ui.add_enabled_ui(
+                    selected_sensor.is_some() && selected_command.is_some(),
+                    |ui| {
+                        if ui.button("Add Rule").clicked()
+                            && let Some(sensor) = selected_sensor
+                            && let Some(command) = selected_command
+                        {
+                            rules.push(Rule::new(*sensor, *command));
+                            state.selected_sensor = None;
+                            state.selected_command = None;
+                        }
+                    },
+                );
             });
 
             ui.separator();
