@@ -12,20 +12,24 @@ use crate::{
         solution::Solution,
         state::State as GameState,
     },
-    messages::{LevelComplete, LoadLevel, TrashCollected},
+    messages::{LevelComplete, LoadLevel, StartSimulation, TrashCollected},
 };
 
 const STEP_TIME_MS: u64 = 500;
 
 #[derive(Component)]
 struct Vac {
-    effect: Effect,
+    effect: Option<Effect>,
 }
 
 impl Vac {
-    fn new(initial_effect: Effect) -> Self {
+    fn new() -> Self {
+        Self { effect: None }
+    }
+
+    fn with_effect(effect: Effect) -> Self {
         Self {
-            effect: initial_effect,
+            effect: Some(effect),
         }
     }
 }
@@ -47,7 +51,6 @@ fn setup_vac(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    solution: Res<Solution>,
     map: Query<&Map>,
     vac: Query<Entity, With<Vac>>,
 ) {
@@ -57,24 +60,16 @@ fn setup_vac(
     }
 
     let map = map.single().unwrap();
-    let mut state = CoreState::new(map.start(), Dir::East);
-
-    // compute starting map location
-    let initial_pos = map.to_game_world(state.vac_pos());
-
-    // execute initial tick
-    // FIXME: listen for a "start" event and do this then
-    let effect = state.tick(map, solution.rules());
-    let vac = Vac::new(effect);
+    let initial_pos = map.to_game_world(map.start());
 
     // spawn a circle with a triangle to show heading
     commands.spawn((
         Mesh2d(meshes.add(Circle::new(0.4 * GRID_SIZE))),
         MeshMaterial2d(materials.add(Color::WHITE)),
         Transform::from_translation(initial_pos),
-        vac,
+        Vac::new(),
         VacMovementTimer::new(),
-        GameState(state),
+        GameState::new(),
         // triangle
         children![(
             Mesh2d(meshes.add(Triangle2d::new(
@@ -86,6 +81,33 @@ fn setup_vac(
             Transform::from_xyz(0.2 * GRID_SIZE, 0., 0.1),
         )],
     ));
+}
+
+fn on_start_sim(
+    solution: Res<Solution>,
+    map: Query<&Map>,
+    mut query: Query<(&mut Vac, &mut GameState)>,
+) {
+    let (mut vac, mut game_state) = query.single_mut().unwrap();
+
+    // state gets initialized to `None` in setup, so we should hydrate
+    // it with the current map and execute the first tick
+    // only if it's currently `None`. otherwise, this event was
+    // probably a resume-after-pause, so don't do anything
+    if game_state.is_some() {
+        return;
+    }
+
+    let map = map.single().unwrap();
+
+    let mut state = CoreState::new(map.start(), Dir::East);
+
+    // execute initial tick
+    let effect = state.tick(map, solution.rules());
+    let new_vac = Vac::with_effect(effect);
+
+    *game_state = GameState::with_state(state);
+    *vac = new_vac;
 }
 
 fn move_vac(
@@ -107,7 +129,10 @@ fn move_vac(
     }
 
     let (mut transform, mut vac, mut timer, mut state) = query.single_mut().unwrap();
+
+    let Some(state) = &mut **state else { return };
     let map = map.single().unwrap();
+
     timer.tick(time.delta());
 
     // if the timer finished since the last update,
@@ -119,7 +144,7 @@ fn move_vac(
 
         // update state and store in movement state
         let effect = state.tick(map, solution.rules());
-        vac.effect = effect;
+        vac.effect = Some(effect);
 
         // fire an event if we just collected trash
         if let Effect::Moved {
@@ -133,7 +158,11 @@ fn move_vac(
     } else {
         let elapsed = timer.elapsed().as_millis() as f32 / STEP_TIME_MS as f32;
 
-        match vac.effect {
+        let Some(effect) = vac.effect else {
+            return;
+        };
+
+        match effect {
             Effect::Moved { from, to, .. } => {
                 let pos = Vec2::lerp(from.as_vec2(), to.as_vec2(), elapsed);
                 transform.translation = map.to_game_world(pos);
@@ -178,8 +207,11 @@ impl Plugin for VacPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            setup_vac.after(MapSetup).run_if(on_message::<LoadLevel>),
-        )
-        .add_systems(Update, move_vac);
+            (
+                setup_vac.after(MapSetup).run_if(on_message::<LoadLevel>),
+                on_start_sim.run_if(on_message::<StartSimulation>),
+                move_vac,
+            ),
+        );
     }
 }

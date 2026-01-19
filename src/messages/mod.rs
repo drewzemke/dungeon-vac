@@ -11,9 +11,10 @@ pub struct MessagesPlugin;
 impl Plugin for MessagesPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<LevelComplete>()
-            .add_message::<ResetLevel>()
+            .add_message::<LoadLevel>()
             .add_message::<NextLevel>()
-            .add_message::<TrashCollected>()
-            .add_message::<LoadLevel>();
+            .add_message::<ResetLevel>()
+            .add_message::<StartSimulation>()
+            .add_message::<TrashCollected>();
     }
 }

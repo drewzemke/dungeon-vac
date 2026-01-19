@@ -7,7 +7,7 @@ use crate::{
         level::LevelProgression, simulation::Simulation, solution::Solution,
         state::State as GameState,
     },
-    messages::{NextLevel, ResetLevel},
+    messages::{NextLevel, ResetLevel, StartSimulation},
 };
 
 /// UI state for rule creation
@@ -27,6 +27,7 @@ fn rule_editor_ui(
     levels: Res<LevelProgression>,
     mut reset: MessageWriter<ResetLevel>,
     mut next_level: MessageWriter<NextLevel>,
+    mut start_sim: MessageWriter<StartSimulation>,
     game_state: Query<&GameState>,
 ) {
     let level = levels.current();
@@ -41,7 +42,7 @@ fn rule_editor_ui(
 
     let running = sim.is_running();
     let can_edit = !sim.has_started();
-    let level_complete = state.is_finished();
+    let level_complete = state.as_ref().is_some_and(|s| s.is_finished());
 
     egui::SidePanel::left("rule_editor")
         .resizable(false)
@@ -50,8 +51,7 @@ fn rule_editor_ui(
             ui.horizontal(|ui| {
                 ui.add_enabled_ui(!running, |ui| {
                     if ui.button("Start").clicked() {
-                        // TODO: turn this into an event
-                        sim.start();
+                        start_sim.write(StartSimulation);
                     }
                 });
 

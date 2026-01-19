@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::messages::{LevelComplete, NextLevel, ResetLevel};
+use crate::messages::{LevelComplete, NextLevel, ResetLevel, StartSimulation};
 
 #[derive(Default, Resource)]
 pub struct Simulation {
@@ -44,6 +44,10 @@ fn on_level_complete(mut sim: ResMut<Simulation>) {
     sim.stop();
 }
 
+fn on_start_sim(mut sim: ResMut<Simulation>) {
+    sim.start();
+}
+
 pub struct SimulationPlugin;
 
 impl Plugin for SimulationPlugin {
@@ -54,6 +58,7 @@ impl Plugin for SimulationPlugin {
                 on_level_complete.run_if(on_message::<LevelComplete>),
                 on_next_level.run_if(on_message::<NextLevel>),
                 on_reset_level.run_if(on_message::<ResetLevel>),
+                on_start_sim.run_if(on_message::<StartSimulation>),
             ),
         );
     }
