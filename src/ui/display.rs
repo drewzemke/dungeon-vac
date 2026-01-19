@@ -1,6 +1,9 @@
 use bevy_egui::egui::WidgetText;
 
-use crate::core::{command::Command, sensor::Sensor};
+use crate::core::{
+    command::{Command, MovementCommand},
+    sensor::Sensor,
+};
 
 // Sensor
 
@@ -39,9 +42,8 @@ impl From<Command> for WidgetText {
 impl From<Command> for String {
     fn from(val: Command) -> Self {
         match val {
-            Command::TurnRight => "THEN turn right",
-            Command::TurnLeft => "THEN turn left",
-            Command::MoveForward => "WHEN go forward",
+            Command::Movement(MovementCommand::TurnRight) => "THEN turn right",
+            Command::Movement(MovementCommand::TurnLeft) => "THEN turn left",
         }
         .into()
     }

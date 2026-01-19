@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    core::{command::Command, level::Level, map::Map, sensor::Sensor},
+    core::{command::MovementCommand, level::Level, map::Map, sensor::Sensor},
     game::map::MapSetup,
     messages::{LoadLevel, NextLevel, ResetLevel},
 };
@@ -110,7 +110,11 @@ fn level_2_navigation() -> Level {
     )
     .unwrap();
 
-    Level::new(map, vec![Sensor::HitWall], vec![Command::TurnRight])
+    Level::new(
+        map,
+        vec![Sensor::HitWall],
+        vec![MovementCommand::TurnRight.into()],
+    )
 }
 
 fn level_3_cleaning() -> Level {
@@ -124,7 +128,11 @@ fn level_3_cleaning() -> Level {
     .unwrap();
 
     // FIXME: add start sensor and clean command
-    Level::new(map, vec![Sensor::Start], vec![Command::TurnLeft])
+    Level::new(
+        map,
+        vec![Sensor::Start],
+        vec![MovementCommand::TurnLeft.into()],
+    )
 }
 
 fn level_5_more_navigation() -> Level {
@@ -144,7 +152,10 @@ fn level_5_more_navigation() -> Level {
     Level::new(
         map,
         vec![Sensor::HitWall, Sensor::SpaceRight, Sensor::SpaceLeft],
-        vec![Command::TurnRight, Command::TurnLeft],
+        vec![
+            MovementCommand::TurnRight.into(),
+            MovementCommand::TurnLeft.into(),
+        ],
     )
 }
 

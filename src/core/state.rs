@@ -1,6 +1,12 @@
 use bevy::math::IVec2;
 
-use crate::core::{command::Command, dir::Dir, map::Map, rule::Rule, sensor::Sensor};
+use crate::core::{
+    command::{CommandSet, MovementCommand},
+    dir::Dir,
+    map::Map,
+    rule::Rule,
+    sensor::Sensor,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Effect {
@@ -75,22 +81,15 @@ impl State {
         // command computation based on rules
         let mut commands = Rule::compute_commands(rules, &sensors);
 
-        // filter out turn commands if we turned last tick
+        // if we turned last tick, clear the movement command so that we definitely move forward
         if turned_last_tick {
-            commands.retain(|cmd| !matches!(cmd, Command::TurnLeft | Command::TurnRight));
-            // If filtering left us empty, fall back to MoveForward
-            if commands.is_empty() {
-                commands.push(Command::MoveForward);
-            }
+            commands.clear_movement();
         }
 
         // advance tick counter
         self.ticks += 1;
 
-        // HACK: until we expand to have categories, there will only ever
-        // be one command
-        assert_eq!(commands.len(), 1);
-        self.apply_command(commands[0], map)
+        self.apply_commands(commands, map)
     }
 
     fn reset_flags(&mut self) {
@@ -98,9 +97,10 @@ impl State {
         self.turned_last_tick = false;
     }
 
-    fn apply_command(&mut self, command: Command, map: &Map) -> Effect {
-        match command {
-            Command::MoveForward => {
+    fn apply_commands(&mut self, commands: CommandSet, map: &Map) -> Effect {
+        match commands.movement() {
+            // NOTE: move forward if no movement was specified
+            None => {
                 let orig_pos = self.vac_pos;
                 // check for a wall collision
                 let dest = orig_pos + self.vac_dir.to_ivec();
@@ -117,7 +117,7 @@ impl State {
                     Effect::BumpedWall
                 }
             }
-            Command::TurnRight => {
+            Some(MovementCommand::TurnRight) => {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_cw();
                 self.turned_last_tick = true;
@@ -126,7 +126,7 @@ impl State {
                     to: self.vac_dir,
                 }
             }
-            Command::TurnLeft => {
+            Some(MovementCommand::TurnLeft) => {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_ccw();
                 self.turned_last_tick = true;
@@ -188,8 +188,6 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::rule::Rule;
-
     use super::*;
 
     #[test]
@@ -214,68 +212,13 @@ mod tests {
     }
 
     #[test]
-    fn test_apply_commands_no_walls() {
-        let map = Map::parse(Map::EMPTY_3X3).unwrap();
-        let mut state = State::new((0, 0), Dir::East);
-
-        let effect = state.apply_command(Command::MoveForward, &map);
-        assert_eq!(state.vac_pos, (1, 0).into());
-        assert_eq!(state.vac_dir, Dir::East);
-        assert!(
-            matches!( effect, Effect::Moved { from, to, .. } if from == (0, 0).into() && to == (1, 0).into() )
-        );
-
-        let effect = state.apply_command(Command::TurnRight, &map);
-        assert_eq!(state.vac_pos, (1, 0).into());
-        assert_eq!(state.vac_dir, Dir::South);
-        assert_eq!(
-            effect,
-            Effect::Rotated {
-                from: Dir::East,
-                to: Dir::South
-            }
-        );
-
-        let effect = state.apply_command(Command::TurnLeft, &map);
-        assert_eq!(state.vac_pos, (1, 0).into());
-        assert_eq!(state.vac_dir, Dir::East);
-        assert_eq!(
-            effect,
-            Effect::Rotated {
-                from: Dir::South,
-                to: Dir::East
-            }
-        );
-    }
-
-    #[test]
-    fn test_apply_commands_with_walls() {
-        let map = Map::parse(Map::ROOM_4X4).unwrap();
-        let mut state = State::new((1, 1), Dir::East);
-
-        // there's one space to move to in this direction before we hit a wall
-        let effect = state.apply_command(Command::MoveForward, &map);
-        assert_eq!(state.vac_pos, (2, 1).into());
-        assert!(!state.hit_wall_last_tick);
-        assert!(
-            matches!( effect, Effect::Moved { from, to, .. } if from == (1, 1).into() && to == (2, 1).into() )
-        );
-
-        // shouldn't be able to move forward again
-        let effect = state.apply_command(Command::MoveForward, &map);
-        assert_eq!(state.vac_pos, (2, 1).into());
-        assert!(state.hit_wall_last_tick);
-        assert_eq!(effect, Effect::BumpedWall);
-    }
-
-    #[test]
     fn test_tick() {
         let map = Map::parse(Map::ROOM_4X4).unwrap();
         let mut state = State::new((1, 1), Dir::East);
 
         let rules = [
-            Rule::new(Sensor::SpaceRight, Command::TurnRight),
-            Rule::new(Sensor::SpaceLeft, Command::TurnLeft),
+            Rule::new(Sensor::SpaceRight, MovementCommand::TurnRight),
+            Rule::new(Sensor::SpaceLeft, MovementCommand::TurnLeft),
         ];
 
         // there's space on the left but not the right,
@@ -297,7 +240,7 @@ mod tests {
         let mut state = State::new((0, 0), Dir::East);
 
         // rule that reacts to a wall hit
-        let rules = [Rule::new(Sensor::HitWall, Command::TurnRight)];
+        let rules = [Rule::new(Sensor::HitWall, MovementCommand::TurnRight)];
 
         // should hit the wall and then turn
         let effect = state.tick(&map, &rules);
@@ -313,7 +256,7 @@ mod tests {
         let mut state = State::new((1, 1), Dir::East);
 
         // rule that always tries to turn
-        let rules = [Rule::new(Sensor::SpaceLeft, Command::TurnRight)];
+        let rules = [Rule::new(Sensor::SpaceLeft, MovementCommand::TurnRight)];
 
         // first tick should turn
         let effect = state.tick(&map, &rules);
