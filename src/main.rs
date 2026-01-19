@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
+use clap::Parser;
 
 use dungeon_vac::{
     game::{
@@ -10,7 +11,16 @@ use dungeon_vac::{
     ui::{camera::CameraPlugin, grid::GridPlugin, rule_editor::RuleEditorPlugin},
 };
 
+#[derive(Parser)]
+#[command(name = "dungeon-vac")]
+struct Args {
+    /// Starting level (1-indexed)
+    #[arg(short, long)]
+    level: Option<usize>,
+}
+
 fn main() {
+    let args = Args::parse();
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -24,7 +34,9 @@ fn main() {
         .add_plugins(EguiPlugin::default())
         .add_plugins(CameraPlugin)
         .add_plugins(GridPlugin)
-        .add_plugins(DefaultLevelsPlugin)
+        .add_plugins(DefaultLevelsPlugin {
+            starting_level: args.level.map(|l| l.saturating_sub(1)).unwrap_or(0),
+        })
         .add_plugins(MapPlugin)
         .add_plugins(VacPlugin)
         .add_plugins(SimulationPlugin)

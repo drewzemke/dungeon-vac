@@ -18,7 +18,7 @@ pub struct LevelProgression {
 }
 
 impl LevelProgression {
-    pub fn default_levels() -> Self {
+    pub fn new(starting_level: usize) -> Self {
         let levels = vec![
             level_1_basics(),
             level_2_navigation(),
@@ -29,7 +29,7 @@ impl LevelProgression {
         ];
         Self {
             levels,
-            current_idx: 0,
+            current_idx: starting_level,
         }
     }
 
@@ -52,8 +52,8 @@ impl LevelProgression {
     }
 }
 
-fn init_level(mut writer: MessageWriter<LoadLevel>) {
-    writer.write(LoadLevel(0));
+fn init_level(mut writer: MessageWriter<LoadLevel>, levels: Res<LevelProgression>) {
+    writer.write(LoadLevel(levels.current_idx));
 }
 
 fn load_level(mut reader: MessageReader<LoadLevel>, mut levels: ResMut<LevelProgression>) {
@@ -72,11 +72,13 @@ fn on_next_level(mut writer: MessageWriter<LoadLevel>, mut levels: ResMut<LevelP
     }
 }
 
-pub struct DefaultLevelsPlugin;
+pub struct DefaultLevelsPlugin {
+    pub starting_level: usize,
+}
 
 impl Plugin for DefaultLevelsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LevelProgression::default_levels())
+        app.insert_resource(LevelProgression::new(self.starting_level))
             .add_systems(Startup, init_level)
             .add_systems(
                 Update,
