@@ -1,7 +1,7 @@
 use bevy_egui::egui::WidgetText;
 
 use crate::core::{
-    command::{Command, MovementCommand},
+    command::{CleaningCommand, Command, MovementCommand},
     sensor::Sensor,
 };
 
@@ -44,6 +44,8 @@ impl From<Command> for String {
         match val {
             Command::Movement(MovementCommand::TurnRight) => "THEN turn right",
             Command::Movement(MovementCommand::TurnLeft) => "THEN turn left",
+            Command::Cleaning(CleaningCommand::StartCleaning) => "THEN start cleaning",
+            Command::Cleaning(CleaningCommand::StopCleaning) => "THEN stop cleaning",
         }
         .into()
     }

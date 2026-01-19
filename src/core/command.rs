@@ -1,7 +1,10 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Command {
     Movement(MovementCommand),
+    Cleaning(CleaningCommand),
 }
+
+// MOVEMENT
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MovementCommand {
@@ -15,11 +18,25 @@ impl From<MovementCommand> for Command {
     }
 }
 
+// CLEANING
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CleaningCommand {
+    StartCleaning,
+    StopCleaning,
+}
+
+impl From<CleaningCommand> for Command {
+    fn from(command: CleaningCommand) -> Self {
+        Self::Cleaning(command)
+    }
+}
+
 /// Represents the full set of commands for the roomba in a single tick
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct CommandSet {
     movement: Option<MovementCommand>,
-    // vacuum: Option<...>
+    cleaning: Option<CleaningCommand>,
 }
 
 impl CommandSet {
@@ -32,11 +49,20 @@ impl CommandSet {
                     self.movement = Some(cmd);
                 }
             }
+            Command::Cleaning(cmd) => {
+                if self.cleaning.is_none() {
+                    self.cleaning = Some(cmd);
+                }
+            }
         }
     }
 
     pub fn movement(&self) -> Option<MovementCommand> {
         self.movement
+    }
+
+    pub fn cleaning(&self) -> Option<CleaningCommand> {
+        self.cleaning
     }
 
     pub fn clear_movement(&mut self) {

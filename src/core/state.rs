@@ -1,7 +1,7 @@
 use bevy::math::IVec2;
 
 use crate::core::{
-    command::{CommandSet, MovementCommand},
+    command::{CleaningCommand, CommandSet, MovementCommand},
     dir::Dir,
     map::Map,
     rule::Rule,
@@ -14,6 +14,7 @@ pub enum Effect {
         from: IVec2,
         to: IVec2,
         collected_trash: bool,
+        cleaning: bool,
     },
     BumpedWall,
     Rotated {
@@ -34,6 +35,7 @@ pub struct State {
     hit_wall_last_tick: bool,
     turned_last_tick: bool,
 
+    cleaning: bool,
     trash: Vec<IVec2>,
 
     is_finished: bool,
@@ -51,6 +53,7 @@ impl State {
             hit_wall_last_tick: false,
             turned_last_tick: false,
 
+            cleaning: false,
             trash: Vec::new(),
 
             is_finished: false,
@@ -98,6 +101,13 @@ impl State {
     }
 
     fn apply_commands(&mut self, commands: CommandSet, map: &Map) -> Effect {
+        match commands.cleaning() {
+            Some(CleaningCommand::StartCleaning) => self.cleaning = true,
+            Some(CleaningCommand::StopCleaning) => self.cleaning = false,
+            None => {}
+        }
+
+        // evaluate movement commands land and return an effect
         match commands.movement() {
             // NOTE: move forward if no movement was specified
             None => {
@@ -111,6 +121,7 @@ impl State {
                         from: orig_pos,
                         to: self.vac_pos,
                         collected_trash: self.collected_trash_this_tick,
+                        cleaning: self.cleaning,
                     }
                 } else {
                     self.hit_wall_last_tick = true;
@@ -176,8 +187,11 @@ impl State {
 
     /// returns true if we're on an exit tile
     fn evaluate_environment(&mut self, map: &Map) -> bool {
-        // check if we can collect a trash here
-        if map.trash().contains(&self.vac_pos) {
+        // check if we can collect a trash here:
+        // - there must be a trash on the map at our current position
+        // - the vac must be in cleaning mode
+        // - FIXME: only collect trash once!
+        if map.trash().contains(&self.vac_pos) && self.cleaning {
             self.collected_trash_this_tick = true;
             self.trash.push(self.vac_pos);
         }
@@ -188,6 +202,8 @@ impl State {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::command::CleaningCommand;
+
     use super::*;
 
     #[test]
@@ -298,14 +314,14 @@ mod tests {
         let map = Map::parse("ST.").unwrap();
         let mut state = State::new((0, 0), Dir::East);
 
-        // no rules, should move forward onto the trash
-        let rules = [];
+        // start cleaning at at start
+        let rules = [Rule::new(Sensor::Start, CleaningCommand::StartCleaning)];
 
         // move forward
         let effect = state.tick(&map, &rules);
         assert!(matches!(effect, Effect::Moved { .. }));
 
-        // move again -- should collect trash (since that's evaluated at the start)
+        // move again -- should collect trash because cleaning is ON
         let effect = state.tick(&map, &rules);
         assert!(matches!(
             effect,
@@ -316,6 +332,32 @@ mod tests {
         ));
         assert_eq!(state.trash, vec![(1, 0).into()]);
         assert!(state.collected_trash_this_tick);
+    }
+
+    #[test]
+    fn test_trash_collection_requires_cleaning() {
+        // start with trash right in front of us
+        let map = Map::parse("ST.").unwrap();
+        let mut state = State::new((0, 0), Dir::East);
+
+        // don't do anything
+        let rules = [];
+
+        // move forward
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(effect, Effect::Moved { .. }));
+
+        // move again -- should NOT collect trash because cleaning is OFF
+        let effect = state.tick(&map, &rules);
+        assert!(matches!(
+            effect,
+            Effect::Moved {
+                collected_trash: false,
+                ..
+            }
+        ));
+        assert_eq!(state.trash, vec![]);
+        assert!(!state.collected_trash_this_tick);
     }
 
     #[test]
