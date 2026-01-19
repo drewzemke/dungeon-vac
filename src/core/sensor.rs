@@ -5,6 +5,7 @@ pub enum Sensor {
     HitWall,
     SpaceLeft,
     SpaceRight,
+    Start,
 }
 
 // FIXME: should this live somewhere else? it isn't purely about game logic
@@ -14,6 +15,7 @@ impl From<Sensor> for String {
             Sensor::HitWall => "WHEN hit wall",
             Sensor::SpaceLeft => "WHEN space left",
             Sensor::SpaceRight => "WHEN space right",
+            Sensor::Start => "WHEN start",
         }
         .into()
     }

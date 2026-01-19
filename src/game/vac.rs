@@ -83,7 +83,7 @@ fn setup_vac(
                 Vec2::new(0.2 * GRID_SIZE, 0.),
             ))),
             MeshMaterial2d(materials.add(Color::BLACK)),
-            Transform::from_xyz(0.2 * GRID_SIZE, 0., 0.),
+            Transform::from_xyz(0.2 * GRID_SIZE, 0., 0.1),
         )],
     ));
 }

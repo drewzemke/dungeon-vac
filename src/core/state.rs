@@ -19,6 +19,8 @@ pub enum Effect {
 
 #[derive(Debug)]
 pub struct State {
+    ticks: usize,
+
     vac_pos: IVec2,
     vac_dir: Dir,
 
@@ -34,6 +36,8 @@ pub struct State {
 impl State {
     pub fn new(vac_pos: impl Into<IVec2>, vac_dir: Dir) -> Self {
         Self {
+            ticks: 0,
+
             vac_pos: vac_pos.into(),
             vac_dir,
 
@@ -79,6 +83,9 @@ impl State {
                 commands.push(Command::MoveForward);
             }
         }
+
+        // advance tick counter
+        self.ticks += 1;
 
         // HACK: until we expand to have categories, there will only ever
         // be one command
@@ -148,6 +155,10 @@ impl State {
             sensors.push(Sensor::HitWall);
         }
 
+        if self.ticks == 0 {
+            sensors.push(Sensor::Start);
+        }
+
         sensors
     }
 
@@ -192,9 +203,14 @@ mod tests {
         assert!(!sensors.contains(&Sensor::SpaceRight));
         assert!(!sensors.contains(&Sensor::HitWall));
 
+        // that was the first tick so we should have also gotten the start sensor
+        assert!(sensors.contains(&Sensor::Start));
+
         state.hit_wall_last_tick = true;
+        state.ticks += 1;
         let sensors = state.evaluate_sensors(&map);
         assert!(sensors.contains(&Sensor::HitWall));
+        assert!(!sensors.contains(&Sensor::Start));
     }
 
     #[test]

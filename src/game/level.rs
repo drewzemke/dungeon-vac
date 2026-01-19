@@ -17,6 +17,7 @@ impl LevelProgression {
         let levels = vec![
             level_1_basics(),
             level_2_navigation(),
+            level_3_cleaning(),
             level_5_more_navigation(),
         ];
         Self {
@@ -87,7 +88,7 @@ fn level_1_basics() -> Level {
     let map = Map::parse(
         r"
 ########
-#S..T.E#
+#S....E#
 ########
 ",
     )
@@ -110,6 +111,20 @@ fn level_2_navigation() -> Level {
     .unwrap();
 
     Level::new(map, vec![Sensor::HitWall], vec![Command::TurnRight])
+}
+
+fn level_3_cleaning() -> Level {
+    let map = Map::parse(
+        r"
+########
+#S..T.E#
+########
+",
+    )
+    .unwrap();
+
+    // FIXME: add start sensor and clean command
+    Level::new(map, vec![Sensor::Start], vec![Command::TurnLeft])
 }
 
 fn level_5_more_navigation() -> Level {
