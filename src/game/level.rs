@@ -1,7 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    core::{command::MovementCommand, level::Level, map::Map, sensor::Sensor},
+    core::{
+        command::{CleaningCommand, MovementCommand},
+        level::Level,
+        map::Map,
+        sensor::Sensor,
+    },
     game::map::MapSetup,
     messages::{LoadLevel, NextLevel, ResetLevel},
 };
@@ -18,7 +23,9 @@ impl LevelProgression {
             level_1_basics(),
             level_2_navigation(),
             level_3_cleaning(),
+            level_4_combining_rules(),
             level_5_more_navigation(),
+            level_6_open_room(),
         ];
         Self {
             levels,
@@ -127,11 +134,37 @@ fn level_3_cleaning() -> Level {
     )
     .unwrap();
 
-    // FIXME: add start sensor and clean command
     Level::new(
         map,
-        vec![Sensor::Start],
-        vec![MovementCommand::TurnLeft.into()],
+        vec![Sensor::HitWall, Sensor::Start],
+        vec![
+            CleaningCommand::StartCleaning.into(),
+            MovementCommand::TurnRight.into(),
+        ],
+    )
+}
+
+fn level_4_combining_rules() -> Level {
+    let map = Map::parse(
+        r"
+######
+#S...#
+####.#
+####T#
+####.#
+####E#
+######
+",
+    )
+    .unwrap();
+
+    Level::new(
+        map,
+        vec![Sensor::HitWall, Sensor::Start],
+        vec![
+            CleaningCommand::StartCleaning.into(),
+            MovementCommand::TurnRight.into(),
+        ],
     )
 }
 
@@ -141,7 +174,7 @@ fn level_5_more_navigation() -> Level {
 #######
 #S....#
 #####.#
-#.....#
+#..T..#
 #.#####
 #....E#
 #######
@@ -151,10 +184,44 @@ fn level_5_more_navigation() -> Level {
 
     Level::new(
         map,
-        vec![Sensor::HitWall, Sensor::SpaceRight, Sensor::SpaceLeft],
         vec![
-            MovementCommand::TurnRight.into(),
+            Sensor::HitWall,
+            Sensor::SpaceRight,
+            Sensor::SpaceLeft,
+            Sensor::Start,
+        ],
+        vec![
+            CleaningCommand::StartCleaning.into(),
             MovementCommand::TurnLeft.into(),
+            MovementCommand::TurnRight.into(),
+        ],
+    )
+}
+
+fn level_6_open_room() -> Level {
+    let map = Map::parse(
+        r"
+########
+###T.###
+#S....E#
+###.T###
+########
+",
+    )
+    .unwrap();
+
+    Level::new(
+        map,
+        vec![
+            Sensor::HitWall,
+            Sensor::SpaceRight,
+            Sensor::SpaceLeft,
+            Sensor::Start,
+        ],
+        vec![
+            CleaningCommand::StartCleaning.into(),
+            MovementCommand::TurnLeft.into(),
+            MovementCommand::TurnRight.into(),
         ],
     )
 }
