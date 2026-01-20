@@ -12,7 +12,7 @@ use crate::{
         solution::Solution,
         state::State as GameState,
     },
-    messages::{LevelComplete, LoadLevel, StartSimulation, TrashCollected},
+    messages::{LevelComplete, LoadLevel, ResetLevel, StartSimulation, TrashCollected},
 };
 
 const STEP_TIME_MS: u64 = 500;
@@ -208,7 +208,9 @@ impl Plugin for VacPlugin {
         app.add_systems(
             Update,
             (
-                setup_vac.after(MapSetup).run_if(on_message::<LoadLevel>),
+                setup_vac
+                    .after(MapSetup)
+                    .run_if(on_message::<LoadLevel>.or(on_message::<ResetLevel>)),
                 on_start_sim.run_if(on_message::<StartSimulation>),
                 move_vac,
             ),

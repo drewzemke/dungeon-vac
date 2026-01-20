@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     core::map::Map as CoreMap,
     game::{constants::GRID_SIZE, level::LevelProgression},
-    messages::{LoadLevel, TrashCollected},
+    messages::{LoadLevel, ResetLevel, TrashCollected},
 };
 
 #[derive(Debug, Component)]
@@ -164,7 +164,9 @@ impl Plugin for MapPlugin {
         app.add_systems(
             Update,
             (
-                setup_map.in_set(MapSetup).run_if(on_message::<LoadLevel>),
+                setup_map
+                    .in_set(MapSetup)
+                    .run_if(on_message::<LoadLevel>.or(on_message::<ResetLevel>)),
                 despawn_trash.run_if(on_message::<TrashCollected>),
             ),
         );

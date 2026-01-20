@@ -8,7 +8,7 @@ use crate::{
         sensor::Sensor,
     },
     game::map::MapSetup,
-    messages::{LoadLevel, NextLevel, ResetLevel},
+    messages::{LoadLevel, NextLevel},
 };
 
 #[derive(Resource)]
@@ -62,10 +62,6 @@ fn load_level(mut reader: MessageReader<LoadLevel>, mut levels: ResMut<LevelProg
     }
 }
 
-fn on_reset_level(mut writer: MessageWriter<LoadLevel>, levels: Res<LevelProgression>) {
-    writer.write(LoadLevel(levels.current_idx));
-}
-
 fn on_next_level(mut writer: MessageWriter<LoadLevel>, mut levels: ResMut<LevelProgression>) {
     if levels.advance_level() {
         writer.write(LoadLevel(levels.current_idx));
@@ -84,7 +80,6 @@ impl Plugin for DefaultLevelsPlugin {
                 Update,
                 (
                     load_level.before(MapSetup).run_if(on_message::<LoadLevel>),
-                    on_reset_level.run_if(on_message::<ResetLevel>),
                     on_next_level.run_if(on_message::<NextLevel>),
                 ),
             );
