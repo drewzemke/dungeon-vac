@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     core::{
         dir::Dir,
-        state::{Effect, State as CoreState},
+        state::{Motion, State as CoreState, TickResult},
     },
     game::{
         constants::GRID_SIZE,
@@ -19,17 +19,17 @@ const STEP_TIME_MS: u64 = 500;
 
 #[derive(Component)]
 struct Vac {
-    effect: Option<Effect>,
+    tick_result: Option<TickResult>,
 }
 
 impl Vac {
     fn new() -> Self {
-        Self { effect: None }
+        Self { tick_result: None }
     }
 
-    fn with_effect(effect: Effect) -> Self {
+    fn with_tick_result(tick_result: TickResult) -> Self {
         Self {
-            effect: Some(effect),
+            tick_result: Some(tick_result),
         }
     }
 }
@@ -103,8 +103,8 @@ fn on_start_sim(
     let mut state = CoreState::new(map.start(), Dir::East);
 
     // execute initial tick
-    let effect = state.tick(map, solution.rules());
-    let new_vac = Vac::with_effect(effect);
+    let tick_result = state.tick(map, solution.rules());
+    let new_vac = Vac::with_tick_result(tick_result);
 
     *game_state = GameState::with_state(state);
     *vac = new_vac;
@@ -143,36 +143,32 @@ fn move_vac(
         transform.translation = map.to_game_world(state.vac_pos(), 3.);
 
         // update state and store in movement state
-        let effect = state.tick(map, solution.rules());
-        vac.effect = Some(effect);
+        let tick_result = state.tick(map, solution.rules());
 
         // fire an event if we just collected trash
-        if let Effect::Moved {
-            from,
-            collected_trash: true,
-            ..
-        } = effect
-        {
-            trash_collected.write(TrashCollected(from));
+        if tick_result.collected_trash {
+            trash_collected.write(TrashCollected(state.vac_pos()));
         }
+
+        vac.tick_result = Some(tick_result);
     } else {
         let elapsed = timer.elapsed().as_millis() as f32 / STEP_TIME_MS as f32;
 
-        let Some(effect) = vac.effect else {
+        let Some(tick_result) = vac.tick_result else {
             return;
         };
 
-        match effect {
-            Effect::Moved { from, to, .. } => {
+        match tick_result.motion {
+            Motion::Moved { from, to } => {
                 let pos = Vec2::lerp(from.as_vec2(), to.as_vec2(), elapsed);
                 transform.translation = map.to_game_world(pos, 3.);
             }
-            Effect::Rotated { from, to } => {
+            Motion::Rotated { from, to } => {
                 let from = Quat::from_rotation_z(from.to_radians());
                 let to = Quat::from_rotation_z(to.to_radians());
                 transform.rotation = Quat::slerp(from, to, elapsed);
             }
-            Effect::BumpedWall => {
+            Motion::BumpedWall => {
                 let bump_direction = Vec2::from(state.vac_dir());
 
                 let bump_offset = if elapsed < 0.3 {
@@ -195,7 +191,7 @@ fn move_vac(
                 transform.translation =
                     map.to_game_world(state.vac_pos().as_vec2() + bump_offset, 3.);
             }
-            Effect::Exited => {
+            Motion::Exited => {
                 level_complete.write(LevelComplete);
             }
         }

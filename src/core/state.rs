@@ -9,19 +9,17 @@ use crate::core::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Effect {
-    Moved {
-        from: IVec2,
-        to: IVec2,
-        collected_trash: bool,
-        cleaning: bool,
-    },
+pub enum Motion {
+    Moved { from: IVec2, to: IVec2 },
     BumpedWall,
-    Rotated {
-        from: Dir,
-        to: Dir,
-    },
+    Rotated { from: Dir, to: Dir },
     Exited,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TickResult {
+    pub motion: Motion,
+    pub collected_trash: bool,
 }
 
 #[derive(Debug)]
@@ -60,7 +58,7 @@ impl State {
         }
     }
 
-    pub fn tick(&mut self, map: &Map, rules: &[Rule]) -> Effect {
+    pub fn tick(&mut self, map: &Map, rules: &[Rule]) -> TickResult {
         // reset the trash flag manually
         self.collected_trash_this_tick = false;
 
@@ -70,7 +68,10 @@ impl State {
             // make sure all of the trash has been collected
             if map.trash().iter().all(|pt| self.trash.contains(pt)) {
                 self.is_finished = true;
-                return Effect::Exited;
+                return TickResult {
+                    motion: Motion::Exited,
+                    collected_trash: self.collected_trash_this_tick,
+                };
             }
         }
 
@@ -92,7 +93,11 @@ impl State {
         // advance tick counter
         self.ticks += 1;
 
-        self.apply_commands(commands, map)
+        let motion = self.apply_commands(commands, map);
+        TickResult {
+            motion,
+            collected_trash: self.collected_trash_this_tick,
+        }
     }
 
     fn reset_flags(&mut self) {
@@ -100,14 +105,14 @@ impl State {
         self.turned_last_tick = false;
     }
 
-    fn apply_commands(&mut self, commands: CommandSet, map: &Map) -> Effect {
+    fn apply_commands(&mut self, commands: CommandSet, map: &Map) -> Motion {
         match commands.cleaning() {
             Some(CleaningCommand::StartCleaning) => self.cleaning = true,
             Some(CleaningCommand::StopCleaning) => self.cleaning = false,
             None => {}
         }
 
-        // evaluate movement commands land and return an effect
+        // evaluate movement commands and return a motion
         match commands.movement() {
             // NOTE: move forward if no movement was specified
             None => {
@@ -117,22 +122,20 @@ impl State {
 
                 if map.has_space(dest) {
                     self.vac_pos = dest;
-                    Effect::Moved {
+                    Motion::Moved {
                         from: orig_pos,
                         to: self.vac_pos,
-                        collected_trash: self.collected_trash_this_tick,
-                        cleaning: self.cleaning,
                     }
                 } else {
                     self.hit_wall_last_tick = true;
-                    Effect::BumpedWall
+                    Motion::BumpedWall
                 }
             }
             Some(MovementCommand::TurnRight) => {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_cw();
                 self.turned_last_tick = true;
-                Effect::Rotated {
+                Motion::Rotated {
                     from: orig_dir,
                     to: self.vac_dir,
                 }
@@ -141,7 +144,7 @@ impl State {
                 let orig_dir = self.vac_dir;
                 self.vac_dir = orig_dir.rotate_ccw();
                 self.turned_last_tick = true;
-                Effect::Rotated {
+                Motion::Rotated {
                     from: orig_dir,
                     to: self.vac_dir,
                 }
@@ -239,11 +242,11 @@ mod tests {
 
         // there's space on the left but not the right,
         // so we should turn left
-        let effect = state.tick(&map, &rules);
+        let result = state.tick(&map, &rules);
         assert_eq!(state.vac_dir, Dir::North);
         assert_eq!(
-            effect,
-            Effect::Rotated {
+            result.motion,
+            Motion::Rotated {
                 from: Dir::East,
                 to: Dir::North
             }
@@ -259,11 +262,11 @@ mod tests {
         let rules = [Rule::new(Sensor::HitWall, MovementCommand::TurnRight)];
 
         // should hit the wall and then turn
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::BumpedWall));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::BumpedWall));
 
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Rotated { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Rotated { .. }));
     }
 
     #[test]
@@ -275,16 +278,16 @@ mod tests {
         let rules = [Rule::new(Sensor::SpaceLeft, MovementCommand::TurnRight)];
 
         // first tick should turn
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Rotated { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Rotated { .. }));
 
         // second tick should move forward (restriction enforced)
-        let effect = state.tick(&map, &rules);
-        assert!(!matches!(effect, Effect::Rotated { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(!matches!(result.motion, Motion::Rotated { .. }));
 
         // third tick can turn again
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Rotated { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Rotated { .. }));
     }
 
     #[test]
@@ -299,13 +302,13 @@ mod tests {
         let rules = [];
 
         // first tick should move forward
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Moved { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
 
         // second tick should exit
-        let effect = state.tick(&map, &rules);
+        let result = state.tick(&map, &rules);
         assert!(state.is_finished);
-        assert!(matches!(effect, Effect::Exited));
+        assert!(matches!(result.motion, Motion::Exited));
     }
 
     #[test]
@@ -318,20 +321,14 @@ mod tests {
         let rules = [Rule::new(Sensor::Start, CleaningCommand::StartCleaning)];
 
         // move forward
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Moved { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
 
         // move again -- should collect trash because cleaning is ON
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(
-            effect,
-            Effect::Moved {
-                collected_trash: true,
-                ..
-            }
-        ));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
+        assert!(result.collected_trash);
         assert_eq!(state.trash, vec![(1, 0).into()]);
-        assert!(state.collected_trash_this_tick);
     }
 
     #[test]
@@ -344,25 +341,19 @@ mod tests {
         let rules = [];
 
         // move forward
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Moved { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
 
         // move again -- should NOT collect trash because cleaning is OFF
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(
-            effect,
-            Effect::Moved {
-                collected_trash: false,
-                ..
-            }
-        ));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
+        assert!(!result.collected_trash);
         assert_eq!(state.trash, vec![]);
-        assert!(!state.collected_trash_this_tick);
     }
 
     #[test]
     fn test_exit_requires_trash_collection() {
-        // start with trash *behimd* us, exit in front
+        // start with trash *behind* us, exit in front
         let map = Map::parse("TSE").unwrap();
         let mut state = State::new((1, 0), Dir::East);
 
@@ -370,13 +361,33 @@ mod tests {
         let rules = [];
 
         // first tick should move forward
-        let effect = state.tick(&map, &rules);
-        assert!(matches!(effect, Effect::Moved { .. }));
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
 
         // second tick should *not* exit, because we haven't collected
         // all of the trash
-        let effect = state.tick(&map, &rules);
+        let result = state.tick(&map, &rules);
         assert!(!state.is_finished);
-        assert!(!matches!(effect, Effect::Exited));
+        assert!(!matches!(result.motion, Motion::Exited));
+    }
+
+    #[test]
+    fn test_trash_collection_while_bumping_wall() {
+        // start on trash with wall in front
+        let map = Map::parse("ST#").unwrap();
+        let mut state = State::new((0, 0), Dir::East);
+
+        // start cleaning at start
+        let rules = [Rule::new(Sensor::Start, CleaningCommand::StartCleaning)];
+
+        // move forward onto the trash
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::Moved { .. }));
+
+        // now we're on trash with a wall ahead - should bump AND collect
+        let result = state.tick(&map, &rules);
+        assert!(matches!(result.motion, Motion::BumpedWall));
+        assert!(result.collected_trash);
+        assert_eq!(state.trash, vec![(1, 0).into()]);
     }
 }
