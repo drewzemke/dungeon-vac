@@ -38,10 +38,10 @@ impl Map {
         Self { map, base_pt }
     }
 
-    pub fn to_game_world(&self, pt: impl ToGameWorld) -> Vec3 {
+    pub fn to_game_world(&self, pt: impl ToGameWorld, z: f32) -> Vec3 {
         let pt = pt.to_game_pt();
         let offset = Vec2::new(pt.x * GRID_SIZE, pt.y * GRID_SIZE);
-        (self.base_pt + offset).extend(0.0)
+        (self.base_pt + offset).extend(z)
     }
 }
 
@@ -91,16 +91,16 @@ pub fn setup_map(
     let wall_positions = map
         .walls()
         .iter()
-        .map(|wall| map.to_game_world(*wall))
+        .map(|wall| map.to_game_world(*wall, 0.))
         .collect::<Vec<_>>();
 
     let trash_positions = map
         .trash()
         .iter()
-        .map(|trash| (*trash, map.to_game_world(*trash)))
+        .map(|trash| (*trash, map.to_game_world(*trash, 2.)))
         .collect::<Vec<_>>();
 
-    let exit_pos = map.to_game_world(map.exit());
+    let exit_pos = map.to_game_world(map.exit(), 1.);
 
     // spawn map with tiles as children
     commands

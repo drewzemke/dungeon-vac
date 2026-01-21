@@ -60,7 +60,7 @@ fn setup_vac(
     }
 
     let map = map.single().unwrap();
-    let initial_pos = map.to_game_world(map.start());
+    let initial_pos = map.to_game_world(map.start(), 3.);
 
     // spawn a circle with a triangle to show heading
     commands.spawn((
@@ -78,7 +78,7 @@ fn setup_vac(
                 Vec2::new(0.2 * GRID_SIZE, 0.),
             ))),
             MeshMaterial2d(materials.add(Color::BLACK)),
-            Transform::from_xyz(0.2 * GRID_SIZE, 0., 0.1),
+            Transform::from_xyz(0.2 * GRID_SIZE, 0., 1.),
         )],
     ));
 }
@@ -140,7 +140,7 @@ fn move_vac(
     // choose a new direction
     if timer.is_finished() {
         // finish moving to the destination point
-        transform.translation = map.to_game_world(state.vac_pos());
+        transform.translation = map.to_game_world(state.vac_pos(), 3.);
 
         // update state and store in movement state
         let effect = state.tick(map, solution.rules());
@@ -165,7 +165,7 @@ fn move_vac(
         match effect {
             Effect::Moved { from, to, .. } => {
                 let pos = Vec2::lerp(from.as_vec2(), to.as_vec2(), elapsed);
-                transform.translation = map.to_game_world(pos);
+                transform.translation = map.to_game_world(pos, 3.);
             }
             Effect::Rotated { from, to } => {
                 let from = Quat::from_rotation_z(from.to_radians());
@@ -192,7 +192,8 @@ fn move_vac(
                     bump_direction * (back + (0.0 - back) * progress)
                 };
 
-                transform.translation = map.to_game_world(state.vac_pos().as_vec2() + bump_offset);
+                transform.translation =
+                    map.to_game_world(state.vac_pos().as_vec2() + bump_offset, 3.);
             }
             Effect::Exited => {
                 level_complete.write(LevelComplete);
